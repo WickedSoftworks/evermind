@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server"
 import { Header } from "@/components/header"
 import { AssignmentsList } from "@/components/assignments-list"
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data, error } = await supabase.auth.getUser()
