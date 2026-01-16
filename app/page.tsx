@@ -2,12 +2,22 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 
 export default async function Home() {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase.auth.getUser()
 
-  if (data?.user) {
-    redirect("/dashboard")
-  } else {
+    if (error) {
+      console.error("Auth error:", error)
+      redirect("/preview")
+    }
+
+    if (data?.user) {
+      redirect("/dashboard")
+    } else {
+      redirect("/preview")
+    }
+  } catch (error) {
+    console.error("Page error:", error)
     redirect("/preview")
   }
 }
