@@ -16,10 +16,15 @@ export default function LoginPage() {
     setError(null)
 
     try {
+      const currentUrl = typeof window !== 'undefined' ? window.location.origin : ''
+      const redirectUrl = currentUrl.includes('localhost') 
+        ? 'http://localhost:3000/auth/callback'
+        : 'https://evermind.shxrk.dev/auth/callback'
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
         },
       })
       if (error) throw error
