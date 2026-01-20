@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useState } from "react"
 import { BookOpen } from "lucide-react"
 import GoogleIcon from "@/components/icons/GoogleIcon"
+import Link from "next/link"
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -66,7 +67,12 @@ export default function LoginPage() {
               </div>
             </CardContent>
           </Card>
-          <p className="text-center text-xs text-muted-foreground">Track your assignments and never miss a deadline</p>
+          <div className="text-center space-y-2">
+            <p className="text-xs text-muted-foreground">Track your assignments and never miss a deadline</p>
+            <Link href="/privacy" className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+              Privacy Policy
+            </Link>
+          </div>
         </div>
       </div>
     </div>
