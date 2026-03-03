@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS assignments (
 ALTER TABLE assignments ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies: Users can only access their own assignments
-CREATE POLICY "Users can view their own assignments" 
+CREATE POLICY "Users can view their own assignments"
   ON assignments FOR SELECT 
   USING (auth.uid() = user_id);
 

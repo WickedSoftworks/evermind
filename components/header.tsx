@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { BookOpen, LogOut, User } from "lucide-react"
+import { BookOpen, LogOut, User, Settings } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -44,6 +44,12 @@ export function Header({ user, isPreview = false }: HeaderProps) {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/settings">
+              <Settings className="h-[1.2rem] w-[1.2rem]" />
+              <span className="sr-only">Settings</span>
+            </Link>
+          </Button>
           {isPreview ? (
             <Button asChild size="sm">
               <Link href="/auth/login">Sign in to save</Link>
