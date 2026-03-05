@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -82,6 +83,10 @@ const DEFAULT_CUSTOM_THEMES: CustomTheme[] = [
 ]
 
 export function SettingsContent({ user }: SettingsContentProps) {
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get("tab")
+  const defaultTab = tabFromUrl === "appearance" ? "appearance" : "general"
+  
   const { theme, setTheme } = useTheme()
   const [customThemes, setCustomThemes] = useState<CustomTheme[]>([])
   const [selectedColorTheme, setSelectedColorTheme] = useState<string>("default")
@@ -190,7 +195,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
   const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User"
 
   return (
-    <Tabs defaultValue="general" className="w-full">
+    <Tabs defaultValue={defaultTab} className="w-full">
       <TabsList className="w-full">
         <TabsTrigger value="general" className="flex-1">General</TabsTrigger>
         <TabsTrigger value="appearance" className="flex-1">Appearance</TabsTrigger>

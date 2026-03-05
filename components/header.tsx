@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { BookOpen, LogOut, User, Settings } from "lucide-react"
+import { BookOpen, LogOut, User, Settings, Home } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -33,7 +33,7 @@ export function Header({ user, isPreview = false }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 w-full items-center justify-between px-6 md:px-10 lg:px-16">
-        <div className="flex items-center gap-2 text-primary">
+        <Link href="/dashboard" className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity cursor-pointer">
           <BookOpen className="h-6 w-6" />
           <span className="text-xl font-bold">Evermind</span>
           {isPreview && (
@@ -41,9 +41,15 @@ export function Header({ user, isPreview = false }: HeaderProps) {
               Preview
             </span>
           )}
-        </div>
+        </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/dashboard">
+              <Home className="h-[1.2rem] w-[1.2rem]" />
+              <span className="sr-only">Home</span>
+            </Link>
+          </Button>
           <Button variant="ghost" size="icon" asChild>
             <Link href="/settings">
               <Settings className="h-[1.2rem] w-[1.2rem]" />
@@ -57,7 +63,7 @@ export function Header({ user, isPreview = false }: HeaderProps) {
           ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full cursor-pointer">
                   <Avatar className="h-8 w-8">
                     <AvatarImage
                       src={user.user_metadata?.avatar_url || "/placeholder.svg"}
@@ -68,11 +74,13 @@ export function Header({ user, isPreview = false }: HeaderProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="text-sm truncate max-w-[200px]">{user.email}</span>
+                <DropdownMenuItem asChild className="flex items-center gap-2 cursor-pointer">
+                  <Link href="/settings?tab=general">
+                    <User className="h-4 w-4" />
+                    <span className="text-sm truncate max-w-[200px]">{user.email}</span>
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign out
                 </DropdownMenuItem>
