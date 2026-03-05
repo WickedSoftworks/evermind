@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "@/components/theme-provider"
-import { Trash2, Plus, Home } from "lucide-react"
-import Link from "next/link"
+import { Trash2, Plus } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 interface SettingsContentProps {
@@ -426,14 +426,11 @@ export function SettingsContent({ user }: SettingsContentProps) {
         </Card>
       </TabsContent>
 
-      <div className="mt-6 flex gap-3">
-        <Button asChild>
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <Home className="h-4 w-4" />
-            Go to Dashboard
-          </Link>
-        </Button>
-      </div>
+      <Alert className="mt-6">
+        <AlertDescription>
+          <strong>Tip!</strong> Click on the Evermind text in the bar up top to go home!
+        </AlertDescription>
+      </Alert>
     </Tabs>
   )
 }
