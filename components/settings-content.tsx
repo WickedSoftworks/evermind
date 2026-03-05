@@ -425,8 +425,8 @@ export function SettingsContent({ user }: SettingsContentProps) {
         </Card>
       </TabsContent>
 
-      <p className="mt-8 text-sm text-muted-foreground">
-        <strong>Tip!</strong> Click on the Evermind text in the bar up top to go home!
+      <p className="mt-10 text-center text-sm text-muted-foreground/70">
+        Tip: Click on the Evermind logo up top to go home
       </p>
     </Tabs>
   )
