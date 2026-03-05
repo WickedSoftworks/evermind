@@ -10,8 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useTheme } from "@/components/theme-provider"
-import { Trash2, Plus } from "lucide-react"
-import type { User as SupabaseUser } from "@supabase/supabase-js"
+import { Trash2, Plus, Home } from "lucide-react"import Link from "next/link"import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 interface SettingsContentProps {
   user: SupabaseUser
@@ -424,6 +423,15 @@ export function SettingsContent({ user }: SettingsContentProps) {
           </CardContent>
         </Card>
       </TabsContent>
+
+      <div className="mt-6 flex gap-3">
+        <Button asChild>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Home className="h-4 w-4" />
+            Go to Dashboard
+          </Link>
+        </Button>
+      </div>
     </Tabs>
   )
 }
