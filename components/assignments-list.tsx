@@ -1,15 +1,37 @@
 "use client"
 
+import { Suspense, lazy } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AssignmentCard } from "@/components/assignment-card"
 import { StatsCards } from "@/components/stats-cards"
-import { WeeklyView } from "@/components/weekly-view"
-import { AddAssignmentDialog } from "@/components/add-assignment-dialog"
 import type { Assignment } from "@/lib/types"
 import { isPast } from "date-fns"
 import useSWR from "swr"
 import { Loader2 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+
+// Dynamic imports for code splitting - these only load when needed
+const WeeklyView = lazy(() => import("@/components/weekly-view").then(mod => ({ default: mod.WeeklyView })))
+const AddAssignmentDialog = lazy(() => import("@/components/add-assignment-dialog").then(mod => ({ default: mod.AddAssignmentDialog })))
+
+// Loading fallbacks
+function WeeklyViewSkeleton() {
+  return (
+    <div className="rounded-xl border bg-card p-6">
+      <Skeleton className="h-6 w-32 mb-4" />
+      <div className="grid grid-cols-7 gap-2">
+        {[...Array(7)].map((_, i) => (
+          <Skeleton key={i} className="h-24 rounded-lg" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function AddButtonSkeleton() {
+  return <Skeleton className="h-10 w-36" />
+}
 
 async function fetchAssignments(): Promise<Assignment[]> {
   const supabase = createClient()
@@ -19,8 +41,17 @@ async function fetchAssignments(): Promise<Assignment[]> {
   return data || []
 }
 
-export function AssignmentsList() {
-  const { data: assignments, error, isLoading } = useSWR("assignments", fetchAssignments)
+interface AssignmentsListProps {
+  /** Initial data from server-side fetch - skips loading state */
+  initialData?: Assignment[]
+}
+
+export function AssignmentsList({ initialData }: AssignmentsListProps) {
+  // Use SWR with fallbackData for instant hydration from server-prefetched data
+  const { data: assignments, error, isLoading } = useSWR("assignments", fetchAssignments, {
+    fallbackData: initialData,
+    revalidateOnMount: !initialData, // Only revalidate if no initial data
+  })
 
   if (isLoading) {
     return (
@@ -50,12 +81,16 @@ export function AssignmentsList() {
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Track your assignments and never miss a deadline</p>
         </div>
-        <AddAssignmentDialog />
+        <Suspense fallback={<AddButtonSkeleton />}>
+          <AddAssignmentDialog />
+        </Suspense>
       </div>
 
       <StatsCards assignments={allAssignments} />
 
-      <WeeklyView assignments={allAssignments} />
+      <Suspense fallback={<WeeklyViewSkeleton />}>
+        <WeeklyView assignments={allAssignments} />
+      </Suspense>
 
       <Tabs defaultValue="pending" className="w-full">
         <TabsList>

@@ -1,5 +1,6 @@
 "use client"
 
+import { lazy, Suspense } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,8 +10,12 @@ import { Calendar, CheckCircle2, Clock, MoreVertical, Pencil, Trash2 } from "luc
 import type { Assignment } from "@/lib/types"
 import { format, isPast, isToday, isTomorrow } from "date-fns"
 import { useSWRConfig } from "swr"
-import { EditAssignmentDialog } from "./edit-assignment-dialog"
 import { useState } from "react"
+
+// Dynamically import the dialog - only loads when user clicks edit
+const EditAssignmentDialog = lazy(() => 
+  import("./edit-assignment-dialog").then(mod => ({ default: mod.EditAssignmentDialog }))
+)
 
 interface AssignmentCardProps {
   assignment: Assignment
@@ -150,12 +155,14 @@ export function AssignmentCard({
         </div>
       </CardContent>
       
-      {!isPreview && (
-        <EditAssignmentDialog
-          assignment={assignment}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-        />
+      {!isPreview && editDialogOpen && (
+        <Suspense fallback={null}>
+          <EditAssignmentDialog
+            assignment={assignment}
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+          />
+        </Suspense>
       )}
     </Card>
   )
