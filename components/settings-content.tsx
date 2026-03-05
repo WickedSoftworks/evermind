@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useTheme } from "@/components/theme-provider"
 import { Trash2, Plus } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
@@ -426,11 +425,9 @@ export function SettingsContent({ user }: SettingsContentProps) {
         </Card>
       </TabsContent>
 
-      <Alert className="mt-6">
-        <AlertDescription>
-          <strong>Tip!</strong> Click on the Evermind text in the bar up top to go home!
-        </AlertDescription>
-      </Alert>
+      <p className="mt-8 text-sm text-muted-foreground">
+        <strong>Tip!</strong> Click on the Evermind text in the bar up top to go home!
+      </p>
     </Tabs>
   )
 }
