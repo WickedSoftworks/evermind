@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useTheme } from "@/components/theme-provider"
-import { Trash2, Plus, Home } from "lucide-react"import Link from "next/link"import type { User as SupabaseUser } from "@supabase/supabase-js"
+import { Trash2, Plus, Home } from "lucide-react"
+import Link from "next/link"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 interface SettingsContentProps {
   user: SupabaseUser
