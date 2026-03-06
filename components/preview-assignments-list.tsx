@@ -109,7 +109,7 @@ export function PreviewAssignmentsList() {
       </div>
 
       <div className="rounded-lg border border-dashed border-primary/50 bg-primary/5 p-3 text-center text-sm text-primary">
-        {"Preview Mode - Changes won't be saved. Sign in with Google to persist your data."}
+        {"Preview Mode - Changes won't be saved. Sign in with an account to persist your data."}
       </div>
 
       <StatsCards assignments={allAssignments} />

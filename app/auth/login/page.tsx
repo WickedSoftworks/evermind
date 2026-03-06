@@ -6,33 +6,75 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useState } from "react"
 import { BookOpen } from "lucide-react"
 import GoogleIcon from "@/components/icons/GoogleIcon"
+import DiscordIcon from "@/components/icons/DiscordIcon"
+import GitHubIcon from "@/components/icons/GitHubIcon"
 import Link from "next/link"
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState<"google" | "discord" | "github" | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const getRedirectUrl = () => {
+    const currentUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    return currentUrl.includes('localhost') 
+      ? 'http://localhost:3000/auth/callback'
+      : 'https://evermind.shxrk.dev/auth/callback'
+  }
 
   const handleGoogleLogin = async () => {
     const supabase = createClient()
-    setIsLoading(true)
+    setIsLoading("google")
     setError(null)
 
     try {
-      const currentUrl = typeof window !== 'undefined' ? window.location.origin : ''
-      const redirectUrl = currentUrl.includes('localhost') 
-        ? 'http://localhost:3000/auth/callback'
-        : 'https://evermind.shxrk.dev/auth/callback'
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: redirectUrl,
+          redirectTo: getRedirectUrl(),
         },
       })
       if (error) throw error
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
-      setIsLoading(false)
+      setIsLoading(null)
+    }
+  }
+
+  const handleDiscordLogin = async () => {
+    const supabase = createClient()
+    setIsLoading("discord")
+    setError(null)
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "discord",
+        options: {
+          redirectTo: getRedirectUrl(),
+        },
+      })
+      if (error) throw error
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "An error occurred")
+      setIsLoading(null)
+    }
+  }
+
+  const handleGitHubLogin = async () => {
+    const supabase = createClient()
+    setIsLoading("github")
+    setError(null)
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo: getRedirectUrl(),
+        },
+      })
+      if (error) throw error
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "An error occurred")
+      setIsLoading(null)
     }
   }
 
@@ -50,19 +92,37 @@ export default function LoginPage() {
           <Card>
             <CardHeader className="text-center">
               <CardTitle className="text-xl">Welcome back</CardTitle>
-              <CardDescription>Sign in with your Google account to continue</CardDescription>
+              <CardDescription>Sign in with your account to continue</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 {error && <p className="text-sm text-destructive text-center">{error}</p>}
                 <Button
                   variant="outline"
                   className="w-full bg-transparent"
                   onClick={handleGoogleLogin}
-                  disabled={isLoading}
+                  disabled={isLoading !== null}
                 >
                   <GoogleIcon />
-                  {isLoading ? "Signing in..." : "Continue with Google"}
+                  {isLoading === "google" ? "Signing in..." : "Continue with Google"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full bg-transparent"
+                  onClick={handleDiscordLogin}
+                  disabled={isLoading !== null}
+                >
+                  <DiscordIcon />
+                  {isLoading === "discord" ? "Signing in..." : "Continue with Discord"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full bg-transparent"
+                  onClick={handleGitHubLogin}
+                  disabled={isLoading !== null}
+                >
+                  <GitHubIcon />
+                  {isLoading === "github" ? "Signing in..." : "Continue with GitHub"}
                 </Button>
               </div>
             </CardContent>

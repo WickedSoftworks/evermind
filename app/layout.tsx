@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { CompactModeProvider, compactModeScript } from "@/components/compact-mode-provider"
+import { ColorThemeProvider, colorThemeScript } from "@/components/color-theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -43,14 +44,17 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: compactModeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: colorThemeScript }} />
       </head>
       <body className={`font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <CompactModeProvider>
-            {children}
-            <Suspense fallback={null}>
-              <Toaster />
-            </Suspense>
+            <ColorThemeProvider>
+              {children}
+              <Suspense fallback={null}>
+                <Toaster />
+              </Suspense>
+            </ColorThemeProvider>
           </CompactModeProvider>
         </ThemeProvider>
         <Suspense fallback={null}>

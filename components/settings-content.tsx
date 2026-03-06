@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useTheme } from "@/components/theme-provider"
 import { useCompactMode } from "@/components/compact-mode-provider"
+import { useColorTheme, DEFAULT_CUSTOM_THEMES, type CustomTheme } from "@/components/color-theme-provider"
 import { Trash2, Plus, Pencil } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -19,69 +20,10 @@ interface SettingsContentProps {
   user: SupabaseUser
 }
 
-interface CustomTheme {
-  id: string
-  name: string
-  colors: {
-    primary: string
-    background: string
-    foreground: string
-    card: string
-    accent: string
-  }
-}
-
 const PRESET_THEMES = [
   { id: "system", name: "System" },
   { id: "light", name: "Light" },
   { id: "dark", name: "Dark" },
-]
-
-const DEFAULT_CUSTOM_THEMES: CustomTheme[] = [
-  {
-    id: "ocean",
-    name: "Ocean",
-    colors: {
-      primary: "oklch(0.55 0.2 220)",
-      background: "oklch(0.98 0.01 220)",
-      foreground: "oklch(0.2 0.02 220)",
-      card: "oklch(1 0 0)",
-      accent: "oklch(0.9 0.05 220)",
-    },
-  },
-  {
-    id: "forest",
-    name: "Forest",
-    colors: {
-      primary: "oklch(0.5 0.15 145)",
-      background: "oklch(0.98 0.01 145)",
-      foreground: "oklch(0.2 0.02 145)",
-      card: "oklch(1 0 0)",
-      accent: "oklch(0.9 0.05 145)",
-    },
-  },
-  {
-    id: "sunset",
-    name: "Sunset",
-    colors: {
-      primary: "oklch(0.6 0.2 25)",
-      background: "oklch(0.98 0.01 25)",
-      foreground: "oklch(0.2 0.02 25)",
-      card: "oklch(1 0 0)",
-      accent: "oklch(0.9 0.05 25)",
-    },
-  },
-  {
-    id: "lavender",
-    name: "Lavender",
-    colors: {
-      primary: "oklch(0.55 0.2 280)",
-      background: "oklch(0.98 0.01 280)",
-      foreground: "oklch(0.2 0.02 280)",
-      card: "oklch(1 0 0)",
-      accent: "oklch(0.9 0.05 280)",
-    },
-  },
 ]
 
 export function SettingsContent({ user }: SettingsContentProps) {
@@ -91,8 +33,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
   
   const { theme, setTheme } = useTheme()
   const { isCompact, setIsCompact } = useCompactMode()
-  const [customThemes, setCustomThemes] = useState<CustomTheme[]>([])
-  const [selectedColorTheme, setSelectedColorTheme] = useState<string>("default")
+  const { colorTheme: selectedColorTheme, setColorTheme, customThemes, setCustomThemes } = useColorTheme()
   const [isAddingTheme, setIsAddingTheme] = useState(false)
   const [editingTheme, setEditingTheme] = useState<CustomTheme | null>(null)
   const [newTheme, setNewTheme] = useState<CustomTheme>({
@@ -107,49 +48,8 @@ export function SettingsContent({ user }: SettingsContentProps) {
     },
   })
 
-  // Load custom themes from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("evermind-custom-themes")
-    if (stored) {
-      setCustomThemes(JSON.parse(stored))
-    } else {
-      setCustomThemes(DEFAULT_CUSTOM_THEMES)
-      localStorage.setItem("evermind-custom-themes", JSON.stringify(DEFAULT_CUSTOM_THEMES))
-    }
-
-    const storedColorTheme = localStorage.getItem("evermind-color-theme")
-    if (storedColorTheme) {
-      setSelectedColorTheme(storedColorTheme)
-      if (storedColorTheme !== "default") {
-        applyColorTheme(storedColorTheme)
-      }
-    }
-  }, [])
-
-  const applyColorTheme = (themeId: string) => {
-    if (themeId === "default") {
-      // Remove custom CSS variables
-      document.documentElement.style.removeProperty("--primary")
-      document.documentElement.style.removeProperty("--background")
-      document.documentElement.style.removeProperty("--foreground")
-      document.documentElement.style.removeProperty("--card")
-      document.documentElement.style.removeProperty("--accent")
-      document.documentElement.style.removeProperty("--ring")
-      return
-    }
-
-    const allThemes = [...DEFAULT_CUSTOM_THEMES, ...customThemes]
-    const selectedTheme = allThemes.find((t) => t.id === themeId)
-    if (selectedTheme) {
-      document.documentElement.style.setProperty("--primary", selectedTheme.colors.primary)
-      document.documentElement.style.setProperty("--ring", selectedTheme.colors.primary)
-    }
-  }
-
   const handleColorThemeChange = (value: string) => {
-    setSelectedColorTheme(value)
-    localStorage.setItem("evermind-color-theme", value)
-    applyColorTheme(value)
+    setColorTheme(value)
   }
 
   const handleAddTheme = () => {
@@ -162,7 +62,6 @@ export function SettingsContent({ user }: SettingsContentProps) {
 
     const updatedThemes = [...customThemes, theme]
     setCustomThemes(updatedThemes)
-    localStorage.setItem("evermind-custom-themes", JSON.stringify(updatedThemes))
     setIsAddingTheme(false)
     setNewTheme({
       id: "",
@@ -180,7 +79,6 @@ export function SettingsContent({ user }: SettingsContentProps) {
   const handleDeleteTheme = (themeId: string) => {
     const updatedThemes = customThemes.filter((t) => t.id !== themeId)
     setCustomThemes(updatedThemes)
-    localStorage.setItem("evermind-custom-themes", JSON.stringify(updatedThemes))
     if (selectedColorTheme === themeId) {
       handleColorThemeChange("default")
     }
@@ -199,11 +97,12 @@ export function SettingsContent({ user }: SettingsContentProps) {
       t.id === editingTheme.id ? { ...newTheme, id: editingTheme.id } : t
     )
     setCustomThemes(updatedThemes)
-    localStorage.setItem("evermind-custom-themes", JSON.stringify(updatedThemes))
     
     // Re-apply if this theme is currently selected
     if (selectedColorTheme === editingTheme.id) {
-      applyColorTheme(editingTheme.id)
+      // Force re-apply by setting to default then back
+      setColorTheme("default")
+      setTimeout(() => setColorTheme(editingTheme.id), 0)
     }
     
     handleCancelEdit()
@@ -513,7 +412,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
       </TabsContent>
 
       <p className="mt-10 text-center text-sm text-muted-foreground/70">
-        Tip: Click on the Evermind logo up top to go home
+        Tip: Click on the Evermind logo to go home!
       </p>
     </Tabs>
   )
