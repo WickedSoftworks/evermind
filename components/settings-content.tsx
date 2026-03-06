@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useTheme } from "@/components/theme-provider"
 import { useCompactMode } from "@/components/compact-mode-provider"
-import { Trash2, Plus } from "lucide-react"
+import { Trash2, Plus, Pencil } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 interface SettingsContentProps {
@@ -94,6 +94,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
   const [customThemes, setCustomThemes] = useState<CustomTheme[]>([])
   const [selectedColorTheme, setSelectedColorTheme] = useState<string>("default")
   const [isAddingTheme, setIsAddingTheme] = useState(false)
+  const [editingTheme, setEditingTheme] = useState<CustomTheme | null>(null)
   const [newTheme, setNewTheme] = useState<CustomTheme>({
     id: "",
     name: "",
@@ -183,6 +184,44 @@ export function SettingsContent({ user }: SettingsContentProps) {
     if (selectedColorTheme === themeId) {
       handleColorThemeChange("default")
     }
+  }
+
+  const handleEditTheme = (theme: CustomTheme) => {
+    setEditingTheme(theme)
+    setNewTheme({ ...theme })
+    setIsAddingTheme(false)
+  }
+
+  const handleSaveEdit = () => {
+    if (!editingTheme || !newTheme.name.trim()) return
+
+    const updatedThemes = customThemes.map((t) =>
+      t.id === editingTheme.id ? { ...newTheme, id: editingTheme.id } : t
+    )
+    setCustomThemes(updatedThemes)
+    localStorage.setItem("evermind-custom-themes", JSON.stringify(updatedThemes))
+    
+    // Re-apply if this theme is currently selected
+    if (selectedColorTheme === editingTheme.id) {
+      applyColorTheme(editingTheme.id)
+    }
+    
+    handleCancelEdit()
+  }
+
+  const handleCancelEdit = () => {
+    setEditingTheme(null)
+    setNewTheme({
+      id: "",
+      name: "",
+      colors: {
+        primary: "#0ea5e9",
+        background: "#ffffff",
+        foreground: "#0f172a",
+        card: "#ffffff",
+        accent: "#f1f5f9",
+      },
+    })
   }
 
   const formatDate = (dateString: string | undefined) => {
@@ -353,24 +392,34 @@ export function SettingsContent({ user }: SettingsContentProps) {
                       />
                       <span className="font-medium">{t.name}</span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteTheme(t.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditTheme(t)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteTheme(t.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Add new theme form */}
-            {isAddingTheme ? (
+            {/* Add/Edit theme form */}
+            {(isAddingTheme || editingTheme) ? (
               <div className="space-y-4 p-4 border rounded-lg">
                 <div className="grid gap-2">
-                  <Label htmlFor="theme-name">Theme Name</Label>
+                  <Label htmlFor="theme-name">{editingTheme ? "Edit Theme Name" : "Theme Name"}</Label>
                   <Input
                     id="theme-name"
                     placeholder="My Custom Theme"
@@ -410,12 +459,25 @@ export function SettingsContent({ user }: SettingsContentProps) {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={handleAddTheme} disabled={!newTheme.name.trim()}>
-                    Save Theme
-                  </Button>
-                  <Button variant="outline" onClick={() => setIsAddingTheme(false)}>
-                    Cancel
-                  </Button>
+                  {editingTheme ? (
+                    <>
+                      <Button onClick={handleSaveEdit} disabled={!newTheme.name.trim()}>
+                        Save Changes
+                      </Button>
+                      <Button variant="outline" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button onClick={handleAddTheme} disabled={!newTheme.name.trim()}>
+                        Save Theme
+                      </Button>
+                      <Button variant="outline" onClick={() => setIsAddingTheme(false)}>
+                        Cancel
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
