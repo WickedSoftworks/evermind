@@ -449,6 +449,10 @@ export function SettingsContent({ user }: SettingsContentProps) {
           </CardContent>
         </Card>
       </TabsContent>
+
+      <p className="mt-10 text-center text-sm text-muted-foreground/70">
+        Tip: Click on the Evermind logo up top to go home
+      </p>
     </Tabs>
   )
 }
