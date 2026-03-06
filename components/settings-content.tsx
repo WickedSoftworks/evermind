@@ -7,9 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useTheme } from "@/components/theme-provider"
+import { useCompactMode } from "@/components/compact-mode-provider"
 import { Trash2, Plus } from "lucide-react"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -88,6 +90,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
   const defaultTab = tabFromUrl === "appearance" ? "appearance" : "general"
   
   const { theme, setTheme } = useTheme()
+  const { isCompact, setIsCompact } = useCompactMode()
   const [customThemes, setCustomThemes] = useState<CustomTheme[]>([])
   const [selectedColorTheme, setSelectedColorTheme] = useState<string>("default")
   const [isAddingTheme, setIsAddingTheme] = useState(false)
@@ -421,6 +424,28 @@ export function SettingsContent({ user }: SettingsContentProps) {
                 Add Custom Theme
               </Button>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Layout Density</CardTitle>
+            <CardDescription>Adjust the spacing and padding of UI elements</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="compact-mode">Compact Mode</Label>
+                <p className="text-sm text-muted-foreground">
+                  Reduce padding and spacing for a denser interface
+                </p>
+              </div>
+              <Switch
+                id="compact-mode"
+                checked={isCompact}
+                onCheckedChange={setIsCompact}
+              />
+            </div>
           </CardContent>
         </Card>
       </TabsContent>

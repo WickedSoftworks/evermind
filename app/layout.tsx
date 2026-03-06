@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
+import { CompactModeProvider, compactModeScript } from "@/components/compact-mode-provider"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -40,12 +41,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: compactModeScript }} />
+      </head>
       <body className={`font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-          <Suspense fallback={null}>
-            <Toaster />
-          </Suspense>
+          <CompactModeProvider>
+            {children}
+            <Suspense fallback={null}>
+              <Toaster />
+            </Suspense>
+          </CompactModeProvider>
         </ThemeProvider>
         <Suspense fallback={null}>
           <Analytics />

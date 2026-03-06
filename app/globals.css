@@ -124,3 +124,109 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Compact mode styles - reduces padding and spacing throughout the UI */
+:root.compact {
+  /* Reduced spacing scale */
+  --compact-spacing: 0.75;
+}
+
+:root.compact .compact-py-6 {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+:root.compact .compact-px-6 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Compact header */
+:root.compact header {
+  height: 2.75rem;
+}
+
+:root.compact header > div {
+  height: 2.75rem;
+}
+
+/* Compact cards */
+:root.compact [data-slot="card"] {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  gap: 0.75rem;
+}
+
+:root.compact [data-slot="card-header"] {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  gap: 0.25rem;
+}
+
+:root.compact [data-slot="card-content"] {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Compact tabs */
+:root.compact [data-slot="tabs"] {
+  gap: 0.25rem;
+}
+
+:root.compact [data-slot="tabs-list"] {
+  height: 2rem;
+}
+
+:root.compact [data-slot="tabs-trigger"] {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+/* Compact buttons */
+:root.compact button {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+
+/* Compact form elements */
+:root.compact [data-slot="select-trigger"] {
+  height: 2rem;
+  padding: 0.25rem 0.5rem;
+}
+
+:root.compact input,
+:root.compact textarea {
+  padding: 0.375rem 0.5rem;
+}
+
+/* Compact dialogs */
+:root.compact [data-slot="dialog-content"] {
+  padding: 1rem;
+  gap: 0.75rem;
+}
+
+/* Compact main content */
+:root.compact main {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+/* Compact grid gaps */
+:root.compact .gap-6 {
+  gap: 1rem;
+}
+
+:root.compact .gap-4 {
+  gap: 0.625rem;
+}
+
+/* Compact avatar in header */
+:root.compact header [data-slot="avatar"] {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+/* Compact weekly view */
+:root.compact .min-h-\[100px\] {
+  min-height: 70px;
+}
