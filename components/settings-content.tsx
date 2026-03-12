@@ -2,6 +2,8 @@
 
 import { useState, useRef } from "react"
 import { useSearchParams } from "next/navigation"
+import { useSWRConfig } from "swr"
+import { createClient } from "@/lib/supabase/client"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -13,7 +15,9 @@ import { Input } from "@/components/ui/input"
 import { useTheme } from "@/components/theme-provider"
 import { useCompactMode } from "@/components/compact-mode-provider"
 import { useColorTheme, DEFAULT_CUSTOM_THEMES, type CustomTheme } from "@/components/color-theme-provider"
-import { Trash2, Plus, Pencil, Upload, FileSpreadsheet, ExternalLink, CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
+import { Trash2, Plus, Pencil, Upload, FileSpreadsheet, ExternalLink, CheckCircle2, AlertCircle, Loader2, Settings2 } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox"
 import GoogleIcon from "@/components/icons/GoogleIcon"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import type { Assignment, Priority } from "@/lib/types"
@@ -51,8 +55,12 @@ export function SettingsContent({ user }: SettingsContentProps) {
   const [canvasImportStatus, setCanvasImportStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
   const [canvasImportMessage, setCanvasImportMessage] = useState("")
   const [parsedAssignments, setParsedAssignments] = useState<ParsedAssignment[]>([])
+  const [selectedAssignments, setSelectedAssignments] = useState<Set<number>>(new Set())
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
   const [googleClassroomStatus, setGoogleClassroomStatus] = useState<"idle" | "loading" | "connected" | "error">("idle")
   const canvasFileInputRef = useRef<HTMLInputElement>(null)
+  const { mutate } = useSWRConfig()
   
   const [newTheme, setNewTheme] = useState<CustomTheme>({
     id: "",
@@ -400,12 +408,79 @@ export function SettingsContent({ user }: SettingsContentProps) {
     }
   }
 
-  // TODO: Implement actual import to database
+  // Assignment selection helpers
+  const handleSelectAll = () => {
+    setSelectedAssignments(new Set(parsedAssignments.map((_, idx) => idx)))
+  }
+
+  const handleSelectNone = () => {
+    setSelectedAssignments(new Set())
+  }
+
+  const handleSelectFuture = () => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const futureIndices = parsedAssignments
+      .map((a, idx) => ({ idx, date: new Date(a.due_date) }))
+      .filter(({ date }) => date >= today)
+      .map(({ idx }) => idx)
+    setSelectedAssignments(new Set(futureIndices))
+  }
+
+  const toggleAssignment = (idx: number) => {
+    const newSelected = new Set(selectedAssignments)
+    if (newSelected.has(idx)) {
+      newSelected.delete(idx)
+    } else {
+      newSelected.add(idx)
+    }
+    setSelectedAssignments(newSelected)
+  }
+
   const handleImportAssignments = async () => {
-    // This would call an API route to save assignments to Supabase
-    console.log("Importing assignments:", parsedAssignments)
-    // For now, just show success
-    setCanvasImportMessage(`Successfully imported ${parsedAssignments.length} assignments!`)
+    const assignmentsToImport = parsedAssignments.filter((_, idx) => selectedAssignments.has(idx))
+    
+    if (assignmentsToImport.length === 0) return
+
+    setIsImporting(true)
+
+    try {
+      const supabase = createClient()
+      
+      // Prepare assignments for database insertion
+      const assignmentsToInsert = assignmentsToImport.map((a) => ({
+        user_id: user.id,
+        title: a.title,
+        subject: a.subject,
+        description: a.description,
+        due_date: new Date(a.due_date).toISOString(),
+        priority: a.priority,
+        status: "pending" as const,
+      }))
+
+      const { error } = await supabase.from("assignments").insert(assignmentsToInsert)
+
+      if (error) {
+        console.error("Error importing assignments:", error)
+        setCanvasImportMessage(`Failed to import: ${error.message}`)
+        setCanvasImportStatus("error")
+      } else {
+        // Refresh assignments data
+        mutate("assignments")
+        setCanvasImportMessage(`Successfully imported ${assignmentsToImport.length} assignment${assignmentsToImport.length !== 1 ? "s" : ""}!`)
+        setImportDialogOpen(false)
+        setSelectedAssignments(new Set())
+        // Reset parsed assignments after successful import
+        setParsedAssignments([])
+        setCanvasImportStatus("idle")
+      }
+    } catch (err) {
+      console.error("Error importing assignments:", err)
+      setCanvasImportMessage("An unexpected error occurred while importing")
+      setCanvasImportStatus("error")
+    } finally {
+      setIsImporting(false)
+    }
   }
 
   // Google Classroom OAuth handler (placeholder)
@@ -415,7 +490,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
     // This would redirect to Google OAuth consent screen
     setTimeout(() => {
       setGoogleClassroomStatus("idle")
-      alert("Google Classroom integration requires OAuth setup. Please configure Google API credentials.")
+      alert("Sorry, this feature isn't fully finished yet, just a placeholder for now!")
     }, 1000)
   }
 
@@ -584,13 +659,82 @@ export function SettingsContent({ user }: SettingsContentProps) {
 
               {canvasImportStatus === "success" && parsedAssignments.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>{canvasImportMessage}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>{canvasImportMessage}</span>
+                    </div>
+                    <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Settings2 className="h-4 w-4 mr-2" />
+                          Select & Import
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+                        <DialogHeader>
+                          <DialogTitle>Select Assignments to Import</DialogTitle>
+                          <DialogDescription>
+                            Choose which assignments you want to add to your dashboard
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex gap-2 py-2">
+                          <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                            Select All
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={handleSelectFuture}>
+                            Select Future
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={handleSelectNone}>
+                            Clear
+                          </Button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto border rounded-lg divide-y min-h-0">
+                          {parsedAssignments.map((assignment, idx) => {
+                            const isPast = new Date(assignment.due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                            return (
+                              <label
+                                key={idx}
+                                className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/50 ${isPast ? "opacity-60" : ""}`}
+                              >
+                                <Checkbox
+                                  checked={selectedAssignments.has(idx)}
+                                  onCheckedChange={() => toggleAssignment(idx)}
+                                  className="mt-0.5"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm truncate">{assignment.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {assignment.subject} • Due: {new Date(assignment.due_date).toLocaleDateString()}
+                                    {isPast && " (Past)"}
+                                  </p>
+                                </div>
+                              </label>
+                            )
+                          })}
+                        </div>
+                        <div className="flex justify-between items-center pt-4 border-t">
+                          <p className="text-sm text-muted-foreground">
+                            {selectedAssignments.size} of {parsedAssignments.length} selected
+                          </p>
+                          <Button
+                            onClick={handleImportAssignments}
+                            disabled={selectedAssignments.size === 0 || isImporting}
+                          >
+                            {isImporting ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Plus className="h-4 w-4 mr-2" />
+                            )}
+                            {isImporting ? "Importing..." : "Import Selected"}
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                   
                   <div className="max-h-48 overflow-y-auto border rounded-lg divide-y">
-                    {parsedAssignments.map((assignment, idx) => (
+                    {parsedAssignments.slice(0, 5).map((assignment, idx) => (
                       <div key={idx} className="p-3 text-sm">
                         <p className="font-medium">{assignment.title}</p>
                         <p className="text-muted-foreground">
@@ -598,12 +742,12 @@ export function SettingsContent({ user }: SettingsContentProps) {
                         </p>
                       </div>
                     ))}
+                    {parsedAssignments.length > 5 && (
+                      <div className="p-3 text-sm text-muted-foreground text-center">
+                        +{parsedAssignments.length - 5} more assignments
+                      </div>
+                    )}
                   </div>
-
-                  <Button onClick={handleImportAssignments} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Import {parsedAssignments.length} Assignment{parsedAssignments.length > 1 ? "s" : ""}
-                  </Button>
                 </div>
               )}
 
