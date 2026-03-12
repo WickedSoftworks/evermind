@@ -71,6 +71,39 @@ const DEFAULT_CUSTOM_THEMES: CustomTheme[] = [
       accent: "#00fff7",
     },
   },
+  {
+    id: "nightswim",
+    name: "Night Swim",
+    colors: {
+      primary: "#123678",
+      background: "#0a1a2b",
+      foreground: "#d0e0f0",
+      card: "#1a2a4a",
+      accent: "#ff6f91",
+    }
+  },
+  {
+    id: "mint",
+    name: "Mint",
+    colors: {
+      primary: "#9cfea4",
+      background: "#f0fff4",
+      foreground: "#004d40",
+      card: "#e0f7fa",
+      accent: "#ff4081",
+    }
+  },
+  {
+    id: "candy",
+    name: "Candy",
+    colors: {
+      primary: "#fe94e1",
+      background: "#fff0f5",
+      foreground: "#4a148c",
+      card: "#fce4ec",
+      accent: "#00bcd4",
+    }
+  },
 ]
 
 interface ColorThemeContextType {

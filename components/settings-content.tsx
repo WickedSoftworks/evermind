@@ -192,24 +192,167 @@ export function SettingsContent({ user }: SettingsContentProps) {
       } else if (file.name.endsWith(".json")) {
         // Parse Canvas JSON export or similar
         const data = JSON.parse(text)
-        const items = Array.isArray(data) ? data : data.assignments || data.items || []
+        const courseName = data.title || "Imported"
         
-        for (const item of items) {
-          const title = item.title || item.name || item.assignment_name
-          const dueDate = item.due_date || item.due_at || item.dueDate
-          
-          if (title && dueDate) {
-            const parsedDate = new Date(dueDate)
-            if (!isNaN(parsedDate.getTime())) {
-              assignments.push({
-                title,
-                subject: item.course_name || item.subject || item.course || "Imported",
-                description: item.description || null,
-                due_date: parsedDate.toISOString().split("T")[0],
-                priority: "medium",
-              })
+        // Handle Canvas COURSE_DATA format (from course-data.js converted to .json)
+        if (data.modules || data.assignments) {
+          // Extract from modules
+          if (data.modules) {
+            for (const module of data.modules) {
+              if (module.items) {
+                for (const item of module.items) {
+                  if (item.dueAt && (item.type === "Assignment" || item.type === "Quizzes::Quiz")) {
+                    const parsedDate = new Date(item.dueAt)
+                    if (!isNaN(parsedDate.getTime())) {
+                      assignments.push({
+                        title: item.title,
+                        subject: courseName,
+                        description: item.content || null,
+                        due_date: parsedDate.toISOString().split("T")[0],
+                        priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
+                      })
+                    }
+                  }
+                }
+              }
             }
           }
+          
+          // Also check top-level assignments array
+          if (data.assignments) {
+            for (const item of data.assignments) {
+              if (item.dueAt) {
+                const parsedDate = new Date(item.dueAt)
+                if (!isNaN(parsedDate.getTime())) {
+                  // Check if we already have this assignment (avoid duplicates)
+                  const exists = assignments.some(a => a.title === item.title && a.due_date === parsedDate.toISOString().split("T")[0])
+                  if (!exists) {
+                    assignments.push({
+                      title: item.title,
+                      subject: courseName,
+                      description: item.content || null,
+                      due_date: parsedDate.toISOString().split("T")[0],
+                      priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
+                    })
+                  }
+                }
+              }
+            }
+          }
+          
+          // Also check quizzes
+          if (data.quizzes) {
+            for (const item of data.quizzes) {
+              if (item.dueAt) {
+                const parsedDate = new Date(item.dueAt)
+                if (!isNaN(parsedDate.getTime())) {
+                  const exists = assignments.some(a => a.title === item.title && a.due_date === parsedDate.toISOString().split("T")[0])
+                  if (!exists) {
+                    assignments.push({
+                      title: item.title,
+                      subject: courseName,
+                      description: item.content || null,
+                      due_date: parsedDate.toISOString().split("T")[0],
+                      priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
+                    })
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          // Fallback for simpler JSON formats
+          const items = Array.isArray(data) ? data : data.items || []
+          for (const item of items) {
+            const title = item.title || item.name || item.assignment_name
+            const dueDate = item.due_date || item.due_at || item.dueAt
+            
+            if (title && dueDate) {
+              const parsedDate = new Date(dueDate)
+              if (!isNaN(parsedDate.getTime())) {
+                assignments.push({
+                  title,
+                  subject: item.course_name || item.subject || item.course || "Imported",
+                  description: item.description || null,
+                  due_date: parsedDate.toISOString().split("T")[0],
+                  priority: "medium",
+                })
+              }
+            }
+          }
+        }
+      } else if (file.name.endsWith(".js")) {
+        // Parse Canvas course-data.js format (window.COURSE_DATA = {...})
+        const jsonMatch = text.match(/window\.COURSE_DATA\s*=\s*(\{[\s\S]*\})/)
+        if (jsonMatch) {
+          const data = JSON.parse(jsonMatch[1])
+          const courseName = data.title || "Imported"
+          
+          // Extract from modules
+          if (data.modules) {
+            for (const module of data.modules) {
+              if (module.items) {
+                for (const item of module.items) {
+                  if (item.dueAt && (item.type === "Assignment" || item.type === "Quizzes::Quiz")) {
+                    const parsedDate = new Date(item.dueAt)
+                    if (!isNaN(parsedDate.getTime())) {
+                      assignments.push({
+                        title: item.title,
+                        subject: courseName,
+                        description: item.content || null,
+                        due_date: parsedDate.toISOString().split("T")[0],
+                        priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
+                      })
+                    }
+                  }
+                }
+              }
+            }
+          }
+          
+          // Also check top-level assignments array
+          if (data.assignments) {
+            for (const item of data.assignments) {
+              if (item.dueAt) {
+                const parsedDate = new Date(item.dueAt)
+                if (!isNaN(parsedDate.getTime())) {
+                  const exists = assignments.some(a => a.title === item.title && a.due_date === parsedDate.toISOString().split("T")[0])
+                  if (!exists) {
+                    assignments.push({
+                      title: item.title,
+                      subject: courseName,
+                      description: item.content || null,
+                      due_date: parsedDate.toISOString().split("T")[0],
+                      priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
+                    })
+                  }
+                }
+              }
+            }
+          }
+          
+          // Also check quizzes
+          if (data.quizzes) {
+            for (const item of data.quizzes) {
+              if (item.dueAt) {
+                const parsedDate = new Date(item.dueAt)
+                if (!isNaN(parsedDate.getTime())) {
+                  const exists = assignments.some(a => a.title === item.title && a.due_date === parsedDate.toISOString().split("T")[0])
+                  if (!exists) {
+                    assignments.push({
+                      title: item.title,
+                      subject: courseName,
+                      description: item.content || null,
+                      due_date: parsedDate.toISOString().split("T")[0],
+                      priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
+                    })
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          throw new Error("Could not find COURSE_DATA in JavaScript file")
         }
       } else if (file.name.endsWith(".xml") || file.name.endsWith(".imscc")) {
         // Parse IMS Common Cartridge (Canvas export format)
@@ -402,7 +545,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
               Canvas Import
             </CardTitle>
             <CardDescription>
-              Import assignments from a Canvas course export file (CSV, JSON, or IMSCC)
+              Import assignments from a Canvas course-data.js file or other export formats
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -411,7 +554,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                 <input
                   ref={canvasFileInputRef}
                   type="file"
-                  accept=".csv,.json,.xml,.imscc"
+                  accept=".csv,.json,.xml,.imscc,.js"
                   onChange={handleCanvasFileImport}
                   className="hidden"
                   id="canvas-file-input"
@@ -420,7 +563,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <p className="font-medium">Click to upload or drag and drop</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    CSV, JSON, XML, or IMSCC files
+                    JS (course-data.js), CSV, JSON, XML, or IMSCC files
                   </p>
                 </label>
               </div>
@@ -465,11 +608,11 @@ export function SettingsContent({ user }: SettingsContentProps) {
               )}
 
               <div className="text-xs text-muted-foreground space-y-1">
-                <p className="font-medium">How to export from Canvas:</p>
+                <p className="font-medium">How to get your Canvas data:</p>
                 <ol className="list-decimal list-inside space-y-0.5">
-                  <li>Go to your Canvas course</li>
-                  <li>Click Settings → Export Course Content</li>
-                  <li>Select "Course" or "Assignments" and download</li>
+                  <li>Use a Canvas data exporter browser extension</li>
+                  <li>Export the course-data.js file from your course</li>
+                  <li>Or go to Settings → Export Course Content in Canvas</li>
                   <li>Upload the exported file here</li>
                 </ol>
               </div>
