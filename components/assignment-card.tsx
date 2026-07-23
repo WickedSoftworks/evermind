@@ -11,6 +11,16 @@ import type { Assignment } from "@/lib/types"
 import { format, isPast, isToday, isTomorrow } from "date-fns"
 import { useSWRConfig } from "swr"
 import { useState } from "react"
+import { useMounted } from "@/hooks/use-mounted"
+
+// Matches format(date, "MMM d, yyyy") but pinned to UTC, so the server and the
+// first client render agree regardless of the visitor's timezone.
+const utcDateFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+})
 
 // Dynamically import the dialog - only loads when user clicks edit
 const EditAssignmentDialog = lazy(() => 
@@ -32,6 +42,7 @@ export function AssignmentCard({
 }: AssignmentCardProps) {
   const { mutate } = useSWRConfig()
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const mounted = useMounted()
 
   const priorityColors = {
     low: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
@@ -49,6 +60,7 @@ export function AssignmentCard({
   const isOverdue = isPast(dueDate) && assignment.status !== "completed"
 
   const getDueDateLabel = () => {
+    if (!mounted) return utcDateFormat.format(dueDate)
     if (isToday(dueDate)) return "Due today"
     if (isTomorrow(dueDate)) return "Due tomorrow"
     return format(dueDate, "MMM d, yyyy")
