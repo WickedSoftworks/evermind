@@ -19,6 +19,7 @@ import { Trash2, Plus, Pencil, Upload, FileSpreadsheet, ExternalLink, CheckCircl
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import GoogleIcon from "@/components/icons/GoogleIcon"
+import { DeleteAccountDialog } from "@/components/delete-account-dialog"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import type { Assignment, Priority } from "@/lib/types"
 
@@ -514,7 +515,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
         <TabsTrigger value="appearance" className="flex-1">Appearance</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="general" className="mt-6">
+      <TabsContent value="general" className="mt-6 space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Account Information</CardTitle>
@@ -558,6 +559,18 @@ export function SettingsContent({ user }: SettingsContentProps) {
                 <p className="text-sm font-medium capitalize">{user.app_metadata?.provider || "Email"}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            <CardDescription>
+              Deleting your account removes your profile and every assignment you have saved. This cannot be undone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DeleteAccountDialog email={user.email || ""} />
           </CardContent>
         </Card>
       </TabsContent>
