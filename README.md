@@ -139,6 +139,16 @@ proxy.ts                Next.js proxy (middleware) — session refresh and routi
 
 The app deploys to [Vercel](https://vercel.com/) as-is. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the project's environment variables, and add `https://<your-domain>/auth/callback` to the redirect URLs in Supabase.
 
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| [Architecture](docs/architecture.md) | How the app is put together: request lifecycle, the three Supabase clients, the data model, hydration rules, and notes on extending it. |
+| [Using & self-hosting](docs/self-hosting.md) | A user guide, then full setup: Supabase schema, OAuth providers, deployment, hardening, and troubleshooting. |
+| [Audit](docs/audit.md) | A review of the current code: known flaws by severity, missing features, and a proposed roadmap. |
+
+> Before deploying anywhere other than `localhost:3000`, read [§3.5 of the self-hosting guide](docs/self-hosting.md#35-fix-the-hardcoded-callback-url) — the OAuth callback URL is currently hardcoded to a specific domain.
+
 ## License
 
 [GNU General Public License v3.0](LICENSE)
