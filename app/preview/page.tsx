@@ -1,15 +1,15 @@
-import { getTimeZone } from "@/lib/timezone-server"
-import { Header } from "@/components/header"
-import { PreviewAssignmentsList } from "@/components/preview-assignments-list"
-import { TimeZoneProvider } from "@/components/timezone-provider"
-import type { Assignment } from "@/lib/types"
-import { addDays, subDays } from "date-fns"
+import { addDays, subDays } from "date-fns";
+import { Header } from "@/components/header";
+import { PreviewAssignmentsList } from "@/components/preview-assignments-list";
+import { TimeZoneProvider } from "@/components/timezone-provider";
+import { getTimeZone } from "@/lib/timezone-server";
+import type { Assignment } from "@/lib/types";
 
 // Reading the visitor's timezone renders this page per request, which also keeps
 // the mock due dates below relative to "now" instead of freezing them at build time.
 
 function createMockAssignments(): Assignment[] {
-  const now = new Date()
+  const now = new Date();
 
   return [
     {
@@ -78,7 +78,7 @@ function createMockAssignments(): Assignment[] {
       status: "pending",
       created_at: now.toISOString(),
     },
-  ]
+  ];
 }
 
 export default async function PreviewPage() {
@@ -89,7 +89,7 @@ export default async function PreviewPage() {
       avatar_url: null,
     },
     // biome-ignore lint/suspicious/noExplicitAny: a stand-in for a Supabase User on a page that has no session
-  } as any
+  } as any;
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,5 +100,5 @@ export default async function PreviewPage() {
         </TimeZoneProvider>
       </main>
     </div>
-  )
+  );
 }

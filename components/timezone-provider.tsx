@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { DEFAULT_TIME_ZONE, TIMEZONE_COOKIE, resolveBrowserTimeZone } from "@/lib/dates"
+import * as React from "react";
+import { DEFAULT_TIME_ZONE, resolveBrowserTimeZone, TIMEZONE_COOKIE } from "@/lib/dates";
 
-const TimeZoneContext = React.createContext(DEFAULT_TIME_ZONE)
+const TimeZoneContext = React.createContext(DEFAULT_TIME_ZONE);
 
 /** The visitor's IANA timezone. Identical on the server and the client once the cookie exists. */
 export function useTimeZone() {
-  return React.useContext(TimeZoneContext)
+  return React.useContext(TimeZoneContext);
 }
 
 interface TimeZoneProviderProps {
   /** Read from the timezone cookie on the server, so the first paint is already correct. */
-  initialTimeZone: string
-  children: React.ReactNode
+  initialTimeZone: string;
+  children: React.ReactNode;
 }
 
 /**
@@ -26,16 +26,16 @@ interface TimeZoneProviderProps {
  * correct. Only the very first request from a device falls back to UTC.
  */
 export function TimeZoneProvider({ initialTimeZone, children }: TimeZoneProviderProps) {
-  const [timeZone, setTimeZone] = React.useState(initialTimeZone)
+  const [timeZone, setTimeZone] = React.useState(initialTimeZone);
 
   React.useEffect(() => {
-    const resolved = resolveBrowserTimeZone()
-    if (resolved === timeZone) return
+    const resolved = resolveBrowserTimeZone();
+    if (resolved === timeZone) return;
     // A year, refreshed on every visit; it is re-set automatically if the user travels.
     // biome-ignore lint/suspicious/noDocumentCookie: the CookieStore API this rule prefers is not available in Safari or Firefox
-    document.cookie = `${TIMEZONE_COOKIE}=${encodeURIComponent(resolved)}; path=/; max-age=31536000; samesite=lax`
-    setTimeZone(resolved)
-  }, [timeZone])
+    document.cookie = `${TIMEZONE_COOKIE}=${encodeURIComponent(resolved)}; path=/; max-age=31536000; samesite=lax`;
+    setTimeZone(resolved);
+  }, [timeZone]);
 
-  return <TimeZoneContext.Provider value={timeZone}>{children}</TimeZoneContext.Provider>
+  return <TimeZoneContext.Provider value={timeZone}>{children}</TimeZoneContext.Provider>;
 }

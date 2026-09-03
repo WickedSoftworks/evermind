@@ -1,5 +1,5 @@
-import { cookies } from "next/headers"
-import { TIMEZONE_COOKIE, normalizeTimeZone } from "@/lib/dates"
+import { cookies } from "next/headers";
+import { normalizeTimeZone, TIMEZONE_COOKIE } from "@/lib/dates";
 
 /**
  * The visitor's timezone as their browser last reported it.
@@ -9,5 +9,5 @@ import { TIMEZONE_COOKIE, normalizeTimeZone } from "@/lib/dates"
  * one visitor's local dates could not be cached across visitors anyway.
  */
 export async function getTimeZone(): Promise<string> {
-  return normalizeTimeZone((await cookies()).get(TIMEZONE_COOKIE)?.value)
+  return normalizeTimeZone((await cookies()).get(TIMEZONE_COOKIE)?.value);
 }

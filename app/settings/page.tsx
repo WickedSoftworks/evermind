@@ -1,13 +1,13 @@
-import { Suspense } from "react"
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import { getTimeZone } from "@/lib/timezone-server"
-import { Header } from "@/components/header"
-import { SettingsContent } from "@/components/settings-content"
-import { TimeZoneProvider } from "@/components/timezone-provider"
-import { Skeleton } from "@/components/ui/skeleton"
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { Header } from "@/components/header";
+import { SettingsContent } from "@/components/settings-content";
+import { TimeZoneProvider } from "@/components/timezone-provider";
+import { Skeleton } from "@/components/ui/skeleton";
+import { createClient } from "@/lib/supabase/server";
+import { getTimeZone } from "@/lib/timezone-server";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 function SettingsLoading() {
   return (
@@ -25,15 +25,15 @@ function SettingsLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default async function SettingsPage() {
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.getUser()
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
 
   if (error || !data?.user) {
-    redirect("/auth/login")
+    redirect("/auth/login");
   }
 
   return (
@@ -50,5 +50,5 @@ export default async function SettingsPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

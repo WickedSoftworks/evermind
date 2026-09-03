@@ -1,28 +1,32 @@
-"use client"
+"use client";
 
-import { lazy, Suspense } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Calendar, CheckCircle2, Clock, MoreVertical, Pencil, Trash2 } from "lucide-react"
-import type { Assignment } from "@/lib/types"
-import { dueDateLabel, isAssignmentOverdue, parseDueDate } from "@/lib/dates"
-import { useTimeZone } from "@/components/timezone-provider"
-import { useSWRConfig } from "swr"
-import { useState } from "react"
+import { Calendar, CheckCircle2, Clock, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { lazy, Suspense, useState } from "react";
+import { useSWRConfig } from "swr";
+import { useTimeZone } from "@/components/timezone-provider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { dueDateLabel, isAssignmentOverdue, parseDueDate } from "@/lib/dates";
+import { createClient } from "@/lib/supabase/client";
+import type { Assignment } from "@/lib/types";
 
 // Dynamically import the dialog - only loads when user clicks edit
-const EditAssignmentDialog = lazy(() => 
-  import("./edit-assignment-dialog").then(mod => ({ default: mod.EditAssignmentDialog }))
-)
+const EditAssignmentDialog = lazy(() =>
+  import("./edit-assignment-dialog").then((mod) => ({ default: mod.EditAssignmentDialog })),
+);
 
 interface AssignmentCardProps {
-  assignment: Assignment
-  isPreview?: boolean
-  onPreviewStatusChange?: (id: string, status: "pending" | "completed") => void
-  onPreviewDelete?: (id: string) => void
+  assignment: Assignment;
+  isPreview?: boolean;
+  onPreviewStatusChange?: (id: string, status: "pending" | "completed") => void;
+  onPreviewDelete?: (id: string) => void;
 }
 
 export function AssignmentCard({
@@ -31,60 +35,60 @@ export function AssignmentCard({
   onPreviewStatusChange,
   onPreviewDelete,
 }: AssignmentCardProps) {
-  const { mutate } = useSWRConfig()
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const timeZone = useTimeZone()
+  const { mutate } = useSWRConfig();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const timeZone = useTimeZone();
 
   const priorityColors = {
     low: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
     medium: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300",
     high: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300",
-  }
+  };
 
   const statusColors = {
     pending: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
     completed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
     overdue: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300",
-  }
+  };
 
-  const dueDate = parseDueDate(assignment.due_date)
-  const isOverdue = isAssignmentOverdue(assignment)
+  const dueDate = parseDueDate(assignment.due_date);
+  const isOverdue = isAssignmentOverdue(assignment);
 
   const handleComplete = async () => {
     if (isPreview) {
-      onPreviewStatusChange?.(assignment.id, "completed")
-      return
+      onPreviewStatusChange?.(assignment.id, "completed");
+      return;
     }
-    const supabase = createClient()
+    const supabase = createClient();
     await supabase
       .from("assignments")
       .update({ status: "completed", updated_at: new Date().toISOString() })
-      .eq("id", assignment.id)
-    mutate("assignments")
-  }
+      .eq("id", assignment.id);
+    mutate("assignments");
+  };
 
   const handleDelete = async () => {
     if (isPreview) {
-      onPreviewDelete?.(assignment.id)
-      return
+      onPreviewDelete?.(assignment.id);
+      return;
     }
-    const supabase = createClient()
-    await supabase.from("assignments").delete().eq("id", assignment.id)
-    mutate("assignments")
-  }
+    const supabase = createClient();
+    await supabase.from("assignments").delete().eq("id", assignment.id);
+    mutate("assignments");
+  };
 
   const handleReopen = async () => {
     if (isPreview) {
-      onPreviewStatusChange?.(assignment.id, "pending")
-      return
+      onPreviewStatusChange?.(assignment.id, "pending");
+      return;
     }
-    const supabase = createClient()
+    const supabase = createClient();
     await supabase
       .from("assignments")
       .update({ status: "pending", updated_at: new Date().toISOString() })
-      .eq("id", assignment.id)
-    mutate("assignments")
-  }
+      .eq("id", assignment.id);
+    mutate("assignments");
+  };
 
   return (
     <Card className={assignment.status === "completed" ? "opacity-60" : ""}>
@@ -150,16 +154,12 @@ export function AssignmentCard({
           </div>
         </div>
       </CardContent>
-      
+
       {!isPreview && editDialogOpen && (
         <Suspense fallback={null}>
-          <EditAssignmentDialog
-            assignment={assignment}
-            open={editDialogOpen}
-            onOpenChange={setEditDialogOpen}
-          />
+          <EditAssignmentDialog assignment={assignment} open={editDialogOpen} onOpenChange={setEditDialogOpen} />
         </Suspense>
       )}
     </Card>
-  )
+  );
 }

@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AssignmentCard } from "@/components/assignment-card"
-import { StatsCards } from "@/components/stats-cards"
-import { WeeklyView } from "@/components/weekly-view"
-import { PreviewAddAssignmentDialog } from "@/components/preview-add-assignment-dialog"
-import type { Assignment } from "@/lib/types"
-import { isAssignmentOverdue, isAssignmentPending } from "@/lib/dates"
+import { useState } from "react";
+import { AssignmentCard } from "@/components/assignment-card";
+import { PreviewAddAssignmentDialog } from "@/components/preview-add-assignment-dialog";
+import { StatsCards } from "@/components/stats-cards";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WeeklyView } from "@/components/weekly-view";
+import { isAssignmentOverdue, isAssignmentPending } from "@/lib/dates";
+import type { Assignment } from "@/lib/types";
 
 export function PreviewAssignmentsList({ initialAssignments }: { initialAssignments: Assignment[] }) {
-  const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments)
+  const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
 
   const handleAddAssignment = (newAssignment: Assignment) => {
-    setAssignments((prev) => [newAssignment, ...prev])
-  }
+    setAssignments((prev) => [newAssignment, ...prev]);
+  };
 
   const handleStatusChange = (id: string, newStatus: "pending" | "completed") => {
-    setAssignments((prev) => prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a)))
-  }
+    setAssignments((prev) => prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a)));
+  };
 
   const handleDelete = (id: string) => {
-    setAssignments((prev) => prev.filter((a) => a.id !== id))
-  }
+    setAssignments((prev) => prev.filter((a) => a.id !== id));
+  };
 
-  const allAssignments = assignments
-  const pendingAssignments = allAssignments.filter((a) => isAssignmentPending(a))
-  const completedAssignments = allAssignments.filter((a) => a.status === "completed")
-  const overdueAssignments = allAssignments.filter((a) => isAssignmentOverdue(a))
+  const allAssignments = assignments;
+  const pendingAssignments = allAssignments.filter((a) => isAssignmentPending(a));
+  const completedAssignments = allAssignments.filter((a) => a.status === "completed");
+  const overdueAssignments = allAssignments.filter((a) => isAssignmentOverdue(a));
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,7 +88,7 @@ export function PreviewAssignmentsList({ initialAssignments }: { initialAssignme
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
 
 function AssignmentsGrid({
@@ -97,17 +97,17 @@ function AssignmentsGrid({
   onStatusChange,
   onDelete,
 }: {
-  assignments: Assignment[]
-  emptyMessage: string
-  onStatusChange: (id: string, status: "pending" | "completed") => void
-  onDelete: (id: string) => void
+  assignments: Assignment[];
+  emptyMessage: string;
+  onStatusChange: (id: string, status: "pending" | "completed") => void;
+  onDelete: (id: string) => void;
 }) {
   if (assignments.length === 0) {
     return (
       <div className="text-center py-12 border rounded-lg bg-muted/50">
         <p className="text-muted-foreground">{emptyMessage}</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -122,5 +122,5 @@ function AssignmentsGrid({
         />
       ))}
     </div>
-  )
+  );
 }

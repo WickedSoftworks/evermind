@@ -1,9 +1,12 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
+import { format } from "date-fns";
+import { CalendarIcon, Plus } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { useSWRConfig } from "swr";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -12,63 +15,59 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Plus } from "lucide-react"
-import { useState } from "react"
-import { useSWRConfig } from "swr"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import type { Priority } from "@/lib/types"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { createClient } from "@/lib/supabase/client";
+import type { Priority } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function AddAssignmentDialog() {
-  const { mutate } = useSWRConfig()
-  const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [title, setTitle] = useState("")
-  const [subject, setSubject] = useState("")
-  const [description, setDescription] = useState("")
-  const [dueDate, setDueDate] = useState<Date>()
-  const [dueTime, setDueTime] = useState("23:59")
-  const [priority, setPriority] = useState<Priority>("medium")
+  const { mutate } = useSWRConfig();
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [title, setTitle] = useState("");
+  const [subject, setSubject] = useState("");
+  const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState<Date>();
+  const [dueTime, setDueTime] = useState("23:59");
+  const [priority, setPriority] = useState<Priority>("medium");
 
   const resetForm = () => {
-    setTitle("")
-    setSubject("")
-    setDescription("")
-    setDueDate(undefined)
-    setDueTime("23:59")
-    setPriority("medium")
-  }
+    setTitle("");
+    setSubject("");
+    setDescription("");
+    setDueDate(undefined);
+    setDueTime("23:59");
+    setPriority("medium");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!dueDate) {
-      return
-    }
-    
-    setIsLoading(true)
+    e.preventDefault();
 
-    const supabase = createClient()
+    if (!dueDate) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    const supabase = createClient();
     const {
       data: { user },
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      setIsLoading(false)
-      return
+      setIsLoading(false);
+      return;
     }
 
     // Combine date and time
-    const [hours, minutes] = dueTime.split(":")
-    const combinedDateTime = new Date(dueDate)
-    combinedDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0)
+    const [hours, minutes] = dueTime.split(":");
+    const combinedDateTime = new Date(dueDate);
+    combinedDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
     await supabase.from("assignments").insert({
       user_id: user.id,
@@ -78,13 +77,13 @@ export function AddAssignmentDialog() {
       due_date: combinedDateTime.toISOString(),
       priority,
       status: "pending",
-    })
+    });
 
-    mutate("assignments")
-    resetForm()
-    setOpen(false)
-    setIsLoading(false)
-  }
+    mutate("assignments");
+    resetForm();
+    setOpen(false);
+    setIsLoading(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -138,22 +137,14 @@ export function AddAssignmentDialog() {
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !dueDate && "text-muted-foreground"
-                      )}
+                      className={cn("justify-start text-left font-normal", !dueDate && "text-muted-foreground")}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {dueDate ? format(dueDate, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                      initialFocus
-                    />
+                    <Calendar mode="single" selected={dueDate} onSelect={setDueDate} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -190,5 +181,5 @@ export function AddAssignmentDialog() {
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

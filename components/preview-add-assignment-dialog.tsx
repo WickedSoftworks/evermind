@@ -1,7 +1,11 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { Button } from "@/components/ui/button"
+import { format } from "date-fns";
+import { CalendarIcon, Clock, Plus } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -10,50 +14,46 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { Plus, CalendarIcon, Clock } from "lucide-react"
-import { useState } from "react"
-import { format } from "date-fns"
-import type { Priority, Assignment } from "@/lib/types"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import type { Assignment, Priority } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface PreviewAddAssignmentDialogProps {
-  onAdd: (assignment: Assignment) => void
+  onAdd: (assignment: Assignment) => void;
 }
 
 export function PreviewAddAssignmentDialog({ onAdd }: PreviewAddAssignmentDialogProps) {
-  const [open, setOpen] = useState(false)
-  const [title, setTitle] = useState("")
-  const [subject, setSubject] = useState("")
-  const [description, setDescription] = useState("")
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
-  const [dueTime, setDueTime] = useState("23:59")
-  const [priority, setPriority] = useState<Priority>("medium")
-  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [subject, setSubject] = useState("");
+  const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [dueTime, setDueTime] = useState("23:59");
+  const [priority, setPriority] = useState<Priority>("medium");
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const resetForm = () => {
-    setTitle("")
-    setSubject("")
-    setDescription("")
-    setDueDate(undefined)
-    setDueTime("23:59")
-    setPriority("medium")
-  }
+    setTitle("");
+    setSubject("");
+    setDescription("");
+    setDueDate(undefined);
+    setDueTime("23:59");
+    setPriority("medium");
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!dueDate) return
+    if (!dueDate) return;
 
-    const [hours, minutes] = dueTime.split(":").map(Number)
-    const combinedDate = new Date(dueDate)
-    combinedDate.setHours(hours, minutes, 0, 0)
+    const [hours, minutes] = dueTime.split(":").map(Number);
+    const combinedDate = new Date(dueDate);
+    combinedDate.setHours(hours, minutes, 0, 0);
 
     const newAssignment: Assignment = {
       id: `preview-${Date.now()}`,
@@ -65,12 +65,12 @@ export function PreviewAddAssignmentDialog({ onAdd }: PreviewAddAssignmentDialog
       priority,
       status: "pending",
       created_at: new Date().toISOString(),
-    }
+    };
 
-    onAdd(newAssignment)
-    resetForm()
-    setOpen(false)
-  }
+    onAdd(newAssignment);
+    resetForm();
+    setOpen(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -135,8 +135,8 @@ export function PreviewAddAssignmentDialog({ onAdd }: PreviewAddAssignmentDialog
                       mode="single"
                       selected={dueDate}
                       onSelect={(date) => {
-                        setDueDate(date)
-                        setCalendarOpen(false)
+                        setDueDate(date);
+                        setCalendarOpen(false);
                       }}
                       disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                       initialFocus
@@ -181,5 +181,5 @@ export function PreviewAddAssignmentDialog({ onAdd }: PreviewAddAssignmentDialog
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

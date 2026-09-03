@@ -1,16 +1,16 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Suspense } from "react"
-import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
-import { ThemeProvider } from "@/components/theme-provider"
-import { CompactModeProvider, compactModeScript } from "@/components/compact-mode-provider"
-import { ColorThemeProvider, colorThemeScript } from "@/components/color-theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import "./globals.css"
+import { Analytics } from "@vercel/analytics/next";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import type React from "react";
+import { Suspense } from "react";
+import { ColorThemeProvider, colorThemeScript } from "@/components/color-theme-provider";
+import { CompactModeProvider, compactModeScript } from "@/components/compact-mode-provider";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
+import "./globals.css";
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const _geist = Geist({ subsets: ["latin"] });
+const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Evermind - Assignment Tracker",
@@ -33,12 +33,12 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -66,5 +66,5 @@ export default function RootLayout({
         </Suspense>
       </body>
     </html>
-  )
+  );
 }

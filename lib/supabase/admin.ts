@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from "@supabase/supabase-js";
 
 /**
  * Service-role client. Bypasses Row Level Security entirely, so it must only
@@ -10,5 +10,5 @@ export function createAdminClient() {
       autoRefreshToken: false,
       persistSession: false,
     },
-  })
+  });
 }

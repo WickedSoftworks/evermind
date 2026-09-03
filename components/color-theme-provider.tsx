@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 
 interface CustomTheme {
-  id: string
-  name: string
+  id: string;
+  name: string;
   colors: {
-    primary: string
-    background: string
-    foreground: string
-    card: string
-    accent: string
-  }
+    primary: string;
+    background: string;
+    foreground: string;
+    card: string;
+    accent: string;
+  };
 }
 
 // Default themes that come with the app
@@ -80,7 +80,7 @@ const DEFAULT_CUSTOM_THEMES: CustomTheme[] = [
       foreground: "#d0e0f0",
       card: "#1a2a4a",
       accent: "#ff6f91",
-    }
+    },
   },
   {
     id: "mint",
@@ -91,7 +91,7 @@ const DEFAULT_CUSTOM_THEMES: CustomTheme[] = [
       foreground: "#004d40",
       card: "#e0f7fa",
       accent: "#ff4081",
-    }
+    },
   },
   {
     id: "candy",
@@ -102,99 +102,99 @@ const DEFAULT_CUSTOM_THEMES: CustomTheme[] = [
       foreground: "#4a148c",
       card: "#fce4ec",
       accent: "#00bcd4",
-    }
+    },
   },
-]
+];
 
 interface ColorThemeContextType {
-  colorTheme: string
-  setColorTheme: (themeId: string) => void
-  customThemes: CustomTheme[]
-  setCustomThemes: (themes: CustomTheme[]) => void
+  colorTheme: string;
+  setColorTheme: (themeId: string) => void;
+  customThemes: CustomTheme[];
+  setCustomThemes: (themes: CustomTheme[]) => void;
 }
 
-const ColorThemeContext = createContext<ColorThemeContextType | undefined>(undefined)
+const ColorThemeContext = createContext<ColorThemeContextType | undefined>(undefined);
 
 function applyColorTheme(themeId: string, customThemes: CustomTheme[]) {
   if (themeId === "default") {
-    document.documentElement.style.removeProperty("--primary")
-    document.documentElement.style.removeProperty("--ring")
-    return
+    document.documentElement.style.removeProperty("--primary");
+    document.documentElement.style.removeProperty("--ring");
+    return;
   }
 
-  const allThemes = [...DEFAULT_CUSTOM_THEMES, ...customThemes]
-  const selectedTheme = allThemes.find((t) => t.id === themeId)
+  const allThemes = [...DEFAULT_CUSTOM_THEMES, ...customThemes];
+  const selectedTheme = allThemes.find((t) => t.id === themeId);
   if (selectedTheme) {
-    document.documentElement.style.setProperty("--primary", selectedTheme.colors.primary)
-    document.documentElement.style.setProperty("--ring", selectedTheme.colors.primary)
+    document.documentElement.style.setProperty("--primary", selectedTheme.colors.primary);
+    document.documentElement.style.setProperty("--ring", selectedTheme.colors.primary);
   }
 }
 
 export function ColorThemeProvider({ children }: { children: ReactNode }) {
-  const [colorTheme, setColorThemeState] = useState("default")
-  const [customThemes, setCustomThemesState] = useState<CustomTheme[]>([])
-  const [mounted, setMounted] = useState(false)
+  const [colorTheme, setColorThemeState] = useState("default");
+  const [customThemes, setCustomThemesState] = useState<CustomTheme[]>([]);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     // Load custom themes from localStorage
-    const storedThemes = localStorage.getItem("evermind-custom-themes")
-    let themes: CustomTheme[] = []
+    const storedThemes = localStorage.getItem("evermind-custom-themes");
+    let themes: CustomTheme[] = [];
     if (storedThemes) {
-      themes = JSON.parse(storedThemes)
-      setCustomThemesState(themes)
+      themes = JSON.parse(storedThemes);
+      setCustomThemesState(themes);
     } else {
-      themes = DEFAULT_CUSTOM_THEMES
-      setCustomThemesState(DEFAULT_CUSTOM_THEMES)
-      localStorage.setItem("evermind-custom-themes", JSON.stringify(DEFAULT_CUSTOM_THEMES))
+      themes = DEFAULT_CUSTOM_THEMES;
+      setCustomThemesState(DEFAULT_CUSTOM_THEMES);
+      localStorage.setItem("evermind-custom-themes", JSON.stringify(DEFAULT_CUSTOM_THEMES));
     }
 
     // Load and apply selected color theme
-    const storedColorTheme = localStorage.getItem("evermind-color-theme")
+    const storedColorTheme = localStorage.getItem("evermind-color-theme");
     if (storedColorTheme && storedColorTheme !== "default") {
-      setColorThemeState(storedColorTheme)
-      applyColorTheme(storedColorTheme, themes)
+      setColorThemeState(storedColorTheme);
+      applyColorTheme(storedColorTheme, themes);
     }
 
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   const setColorTheme = (themeId: string) => {
-    setColorThemeState(themeId)
-    localStorage.setItem("evermind-color-theme", themeId)
-    applyColorTheme(themeId, customThemes)
-  }
+    setColorThemeState(themeId);
+    localStorage.setItem("evermind-color-theme", themeId);
+    applyColorTheme(themeId, customThemes);
+  };
 
   const setCustomThemes = (themes: CustomTheme[]) => {
-    setCustomThemesState(themes)
-    localStorage.setItem("evermind-custom-themes", JSON.stringify(themes))
-  }
+    setCustomThemesState(themes);
+    localStorage.setItem("evermind-custom-themes", JSON.stringify(themes));
+  };
 
   if (!mounted) {
-    return <>{children}</>
+    return <>{children}</>;
   }
 
   return (
     <ColorThemeContext.Provider value={{ colorTheme, setColorTheme, customThemes, setCustomThemes }}>
       {children}
     </ColorThemeContext.Provider>
-  )
+  );
 }
 
 export function useColorTheme() {
-  const context = useContext(ColorThemeContext)
+  const context = useContext(ColorThemeContext);
   if (context === undefined) {
     return {
       colorTheme: "default",
       setColorTheme: () => {},
       customThemes: [],
       setCustomThemes: () => {},
-    }
+    };
   }
-  return context
+  return context;
 }
 
-export { DEFAULT_CUSTOM_THEMES }
-export type { CustomTheme }
+export type { CustomTheme };
+export { DEFAULT_CUSTOM_THEMES };
 
 /**
  * Script to inject into the page head to prevent FOUC for color themes.
@@ -234,4 +234,4 @@ export const colorThemeScript = `
       }
     } catch (e) {}
   })();
-`
+`;

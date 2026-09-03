@@ -1,14 +1,14 @@
-import { Suspense } from "react"
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import { fetchDashboardData } from "@/lib/data/dashboard"
-import { getTimeZone } from "@/lib/timezone-server"
-import { Header } from "@/components/header"
-import { AssignmentsList } from "@/components/assignments-list"
-import { TimeZoneProvider } from "@/components/timezone-provider"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { AssignmentsList } from "@/components/assignments-list";
+import { Header } from "@/components/header";
+import { TimeZoneProvider } from "@/components/timezone-provider";
+import { fetchDashboardData } from "@/lib/data/dashboard";
+import { createClient } from "@/lib/supabase/server";
+import { getTimeZone } from "@/lib/timezone-server";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 // Loading component for the assignments list
 function AssignmentsLoading() {
@@ -16,27 +16,27 @@ function AssignmentsLoading() {
     <div className="flex items-center justify-center py-12">
       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
-  )
+  );
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  
+  const supabase = await createClient();
+
   // Fetch user auth and dashboard data in parallel using Promise.all
-  const [userResult, ] = await Promise.all([
+  const [userResult] = await Promise.all([
     supabase.auth.getUser(),
     // Add more parallel auth/config fetches here if needed
-  ])
+  ]);
 
-  const { data, error } = userResult
+  const { data, error } = userResult;
 
   if (error || !data?.user) {
-    redirect("/auth/login")
+    redirect("/auth/login");
   }
 
   // Fetch dashboard data (assignments, etc.) - uses Promise.all internally
-  const dashboardData = await fetchDashboardData(data.user.id)
-  const timeZone = await getTimeZone()
+  const dashboardData = await fetchDashboardData(data.user.id);
+  const timeZone = await getTimeZone();
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,5 +50,5 @@ export default async function DashboardPage() {
         </Suspense>
       </main>
     </div>
-  )
+  );
 }

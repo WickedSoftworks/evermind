@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -11,55 +12,54 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 // Settings the app keeps outside the database.
-const LOCAL_KEYS = ["evermind-compact-mode", "evermind-color-theme", "evermind-custom-themes"]
+const LOCAL_KEYS = ["evermind-compact-mode", "evermind-color-theme", "evermind-custom-themes"];
 
 export function DeleteAccountDialog({ email }: { email: string }) {
-  const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [confirmation, setConfirmation] = useState("")
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const canDelete = confirmation.trim().toLowerCase() === email.toLowerCase()
+  const canDelete = confirmation.trim().toLowerCase() === email.toLowerCase();
 
   const handleDelete = async () => {
-    setIsDeleting(true)
-    setError(null)
+    setIsDeleting(true);
+    setError(null);
 
     try {
-      const response = await fetch("/api/account/delete", { method: "POST" })
+      const response = await fetch("/api/account/delete", { method: "POST" });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}))
-        setError(body.error || "Could not delete the account. Please try again.")
-        setIsDeleting(false)
-        return
+        const body = await response.json().catch(() => ({}));
+        setError(body.error || "Could not delete the account. Please try again.");
+        setIsDeleting(false);
+        return;
       }
     } catch {
-      setError("Could not reach the server. Please try again.")
-      setIsDeleting(false)
-      return
+      setError("Could not reach the server. Please try again.");
+      setIsDeleting(false);
+      return;
     }
 
     LOCAL_KEYS.forEach((key) => {
-      localStorage.removeItem(key)
-    })
-    router.replace("/auth/login")
-  }
+      localStorage.removeItem(key);
+    });
+    router.replace("/auth/login");
+  };
 
   const handleOpenChange = (next: boolean) => {
-    if (isDeleting) return
-    setOpen(next)
-    setConfirmation("")
-    setError(null)
-  }
+    if (isDeleting) return;
+    setOpen(next);
+    setConfirmation("");
+    setError(null);
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
@@ -97,5 +97,5 @@ export function DeleteAccountDialog({ email }: { email: string }) {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }

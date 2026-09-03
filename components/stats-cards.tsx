@@ -1,17 +1,17 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, CheckCircle2, Clock, AlertTriangle } from "lucide-react"
-import type { Assignment } from "@/lib/types"
-import { isAssignmentOverdue, isAssignmentPending } from "@/lib/dates"
+import { AlertTriangle, BookOpen, CheckCircle2, Clock } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { isAssignmentOverdue, isAssignmentPending } from "@/lib/dates";
+import type { Assignment } from "@/lib/types";
 
 interface StatsCardsProps {
-  assignments: Assignment[]
+  assignments: Assignment[];
 }
 
 export function StatsCards({ assignments }: StatsCardsProps) {
-  const total = assignments.length
-  const completed = assignments.filter((a) => a.status === "completed").length
-  const pending = assignments.filter((a) => isAssignmentPending(a)).length
-  const overdue = assignments.filter((a) => isAssignmentOverdue(a)).length
+  const total = assignments.length;
+  const completed = assignments.filter((a) => a.status === "completed").length;
+  const pending = assignments.filter((a) => isAssignmentPending(a)).length;
+  const overdue = assignments.filter((a) => isAssignmentOverdue(a)).length;
 
   const stats = [
     {
@@ -38,7 +38,7 @@ export function StatsCards({ assignments }: StatsCardsProps) {
       icon: AlertTriangle,
       color: "text-rose-600",
     },
-  ]
+  ];
 
   return (
     <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -54,5 +54,5 @@ export function StatsCards({ assignments }: StatsCardsProps) {
         </Card>
       ))}
     </div>
-  )
+  );
 }

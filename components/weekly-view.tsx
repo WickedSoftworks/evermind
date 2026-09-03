@@ -1,55 +1,49 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { useTimeZone } from "@/components/timezone-provider"
-import type { Assignment } from "@/lib/types"
-import {
-  addCalendarDays,
-  formatDayKey,
-  parseDueDate,
-  startOfWeekKey,
-  zonedDayKey,
-} from "@/lib/dates"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { useTimeZone } from "@/components/timezone-provider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { addCalendarDays, formatDayKey, parseDueDate, startOfWeekKey, zonedDayKey } from "@/lib/dates";
+import type { Assignment } from "@/lib/types";
 
 interface WeeklyViewProps {
-  assignments: Assignment[]
+  assignments: Assignment[];
 }
 
 export function WeeklyView({ assignments }: WeeklyViewProps) {
-  const [weekOffset, setWeekOffset] = useState(0)
-  const timeZone = useTimeZone()
+  const [weekOffset, setWeekOffset] = useState(0);
+  const timeZone = useTimeZone();
 
   // Calendar-day keys rather than Date objects: which day an assignment lands on
   // depends on the visitor's timezone, and week boundaries must not be nudged by
   // a DST transition falling inside the week.
-  const todayKey = zonedDayKey(new Date(), timeZone)
-  const weekStartKey = addCalendarDays(startOfWeekKey(todayKey), weekOffset * 7)
-  const weekEndKey = addCalendarDays(weekStartKey, 6)
-  const weekDayKeys = Array.from({ length: 7 }, (_, i) => addCalendarDays(weekStartKey, i))
+  const todayKey = zonedDayKey(new Date(), timeZone);
+  const weekStartKey = addCalendarDays(startOfWeekKey(todayKey), weekOffset * 7);
+  const weekEndKey = addCalendarDays(weekStartKey, 6);
+  const weekDayKeys = Array.from({ length: 7 }, (_, i) => addCalendarDays(weekStartKey, i));
 
   const getAssignmentsForDay = (dayKey: string) => {
     return assignments.filter(
       (a) => a.status !== "completed" && zonedDayKey(parseDueDate(a.due_date), timeZone) === dayKey,
-    )
-  }
+    );
+  };
 
   const priorityColors = {
     low: "bg-emerald-500",
     medium: "bg-amber-500",
     high: "bg-rose-500",
-  }
+  };
 
   const getWeekLabel = () => {
-    if (weekOffset === 0) return "This Week"
-    if (weekOffset === 1) return "Next Week"
-    if (weekOffset === -1) return "Last Week"
-    const dayAndMonth: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }
-    return `${formatDayKey(weekStartKey, dayAndMonth)} - ${formatDayKey(weekEndKey, dayAndMonth)}`
-  }
+    if (weekOffset === 0) return "This Week";
+    if (weekOffset === 1) return "Next Week";
+    if (weekOffset === -1) return "Last Week";
+    const dayAndMonth: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+    return `${formatDayKey(weekStartKey, dayAndMonth)} - ${formatDayKey(weekEndKey, dayAndMonth)}`;
+  };
 
   return (
     <Card>
@@ -57,12 +51,7 @@ export function WeeklyView({ assignments }: WeeklyViewProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">{getWeekLabel()}</CardTitle>
           <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setWeekOffset(weekOffset - 1)}
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(weekOffset - 1)}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
@@ -74,12 +63,7 @@ export function WeeklyView({ assignments }: WeeklyViewProps) {
             >
               Today
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setWeekOffset(weekOffset + 1)}
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(weekOffset + 1)}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -88,8 +72,8 @@ export function WeeklyView({ assignments }: WeeklyViewProps) {
       <CardContent>
         <div className="grid grid-cols-7 gap-2">
           {weekDayKeys.map((dayKey) => {
-            const dayAssignments = getAssignmentsForDay(dayKey)
-            const today = dayKey === todayKey
+            const dayAssignments = getAssignmentsForDay(dayKey);
+            const today = dayKey === todayKey;
             return (
               <div
                 key={dayKey}
@@ -119,10 +103,10 @@ export function WeeklyView({ assignments }: WeeklyViewProps) {
                   )}
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

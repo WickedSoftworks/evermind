@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PreviewLoading() {
   return (
@@ -51,5 +51,5 @@ export default function PreviewLoading() {
         </div>
       </main>
     </div>
-  )
+  );
 }

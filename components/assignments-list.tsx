@@ -1,19 +1,21 @@
-"use client"
+"use client";
 
-import { Suspense, lazy } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AssignmentCard } from "@/components/assignment-card"
-import { StatsCards } from "@/components/stats-cards"
-import type { Assignment } from "@/lib/types"
-import { isAssignmentOverdue, isAssignmentPending } from "@/lib/dates"
-import useSWR from "swr"
-import { Loader2 } from "lucide-react"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Loader2 } from "lucide-react";
+import { lazy, Suspense } from "react";
+import useSWR from "swr";
+import { AssignmentCard } from "@/components/assignment-card";
+import { StatsCards } from "@/components/stats-cards";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isAssignmentOverdue, isAssignmentPending } from "@/lib/dates";
+import { createClient } from "@/lib/supabase/client";
+import type { Assignment } from "@/lib/types";
 
 // Dynamic imports for code splitting - these only load when needed
-const WeeklyView = lazy(() => import("@/components/weekly-view").then(mod => ({ default: mod.WeeklyView })))
-const AddAssignmentDialog = lazy(() => import("@/components/add-assignment-dialog").then(mod => ({ default: mod.AddAssignmentDialog })))
+const WeeklyView = lazy(() => import("@/components/weekly-view").then((mod) => ({ default: mod.WeeklyView })));
+const AddAssignmentDialog = lazy(() =>
+  import("@/components/add-assignment-dialog").then((mod) => ({ default: mod.AddAssignmentDialog })),
+);
 
 // Loading fallbacks
 function WeeklyViewSkeleton() {
@@ -26,39 +28,43 @@ function WeeklyViewSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function AddButtonSkeleton() {
-  return <Skeleton className="h-10 w-36" />
+  return <Skeleton className="h-10 w-36" />;
 }
 
 async function fetchAssignments(): Promise<Assignment[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase.from("assignments").select("*").order("due_date", { ascending: true })
+  const supabase = createClient();
+  const { data, error } = await supabase.from("assignments").select("*").order("due_date", { ascending: true });
 
-  if (error) throw error
-  return data || []
+  if (error) throw error;
+  return data || [];
 }
 
 interface AssignmentsListProps {
   /** Initial data from server-side fetch - skips loading state */
-  initialData?: Assignment[]
+  initialData?: Assignment[];
 }
 
 export function AssignmentsList({ initialData }: AssignmentsListProps) {
   // Use SWR with fallbackData for instant hydration from server-prefetched data
-  const { data: assignments, error, isLoading } = useSWR("assignments", fetchAssignments, {
+  const {
+    data: assignments,
+    error,
+    isLoading,
+  } = useSWR("assignments", fetchAssignments, {
     fallbackData: initialData,
     revalidateOnMount: !initialData, // Only revalidate if no initial data
-  })
+  });
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -66,13 +72,13 @@ export function AssignmentsList({ initialData }: AssignmentsListProps) {
       <div className="text-center py-12">
         <p className="text-muted-foreground">Failed to load assignments</p>
       </div>
-    )
+    );
   }
 
-  const allAssignments = assignments || []
-  const pendingAssignments = allAssignments.filter((a) => isAssignmentPending(a))
-  const completedAssignments = allAssignments.filter((a) => a.status === "completed")
-  const overdueAssignments = allAssignments.filter((a) => isAssignmentOverdue(a))
+  const allAssignments = assignments || [];
+  const pendingAssignments = allAssignments.filter((a) => isAssignmentPending(a));
+  const completedAssignments = allAssignments.filter((a) => a.status === "completed");
+  const overdueAssignments = allAssignments.filter((a) => isAssignmentOverdue(a));
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,22 +119,16 @@ export function AssignmentsList({ initialData }: AssignmentsListProps) {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
 
-function AssignmentsGrid({
-  assignments,
-  emptyMessage,
-}: {
-  assignments: Assignment[]
-  emptyMessage: string
-}) {
+function AssignmentsGrid({ assignments, emptyMessage }: { assignments: Assignment[]; emptyMessage: string }) {
   if (assignments.length === 0) {
     return (
       <div className="text-center py-12 border rounded-lg bg-muted/50">
         <p className="text-muted-foreground">{emptyMessage}</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -137,5 +137,5 @@ function AssignmentsGrid({
         <AssignmentCard key={assignment.id} assignment={assignment} />
       ))}
     </div>
-  )
+  );
 }

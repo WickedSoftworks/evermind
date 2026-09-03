@@ -1,56 +1,74 @@
-"use client"
+"use client";
 
-import { useState, useRef } from "react"
-import { useSearchParams } from "next/navigation"
-import { useSWRConfig } from "swr"
-import { createClient } from "@/lib/supabase/client"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useTheme } from "@/components/theme-provider"
-import { useCompactMode } from "@/components/compact-mode-provider"
-import { useColorTheme, DEFAULT_CUSTOM_THEMES, type CustomTheme } from "@/components/color-theme-provider"
-import { Trash2, Plus, Pencil, Upload, FileSpreadsheet, ExternalLink, CheckCircle2, AlertCircle, Loader2, Settings2 } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Checkbox } from "@/components/ui/checkbox"
-import GoogleIcon from "@/components/icons/GoogleIcon"
-import { DeleteAccountDialog } from "@/components/delete-account-dialog"
-import type { User as SupabaseUser } from "@supabase/supabase-js"
-import type { Priority } from "@/lib/types"
-import { formatDueDate, isValidDate, parseDueDate } from "@/lib/dates"
-import { useTimeZone } from "@/components/timezone-provider"
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ExternalLink,
+  FileSpreadsheet,
+  Loader2,
+  Pencil,
+  Plus,
+  Settings2,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { useRef, useState } from "react";
+import { useSWRConfig } from "swr";
+import { type CustomTheme, DEFAULT_CUSTOM_THEMES, useColorTheme } from "@/components/color-theme-provider";
+import { useCompactMode } from "@/components/compact-mode-provider";
+import { DeleteAccountDialog } from "@/components/delete-account-dialog";
+import GoogleIcon from "@/components/icons/GoogleIcon";
+import { useTheme } from "@/components/theme-provider";
+import { useTimeZone } from "@/components/timezone-provider";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDueDate, isValidDate, parseDueDate } from "@/lib/dates";
+import { createClient } from "@/lib/supabase/client";
+import type { Priority } from "@/lib/types";
 
 interface SettingsContentProps {
-  user: SupabaseUser
+  user: SupabaseUser;
 }
 
 interface ParsedAssignment {
-  title: string
-  subject: string
-  description: string | null
-  due_date: string
-  priority: Priority
+  title: string;
+  subject: string;
+  description: string | null;
+  due_date: string;
+  priority: Priority;
 }
 
 /** One item from a Canvas export, normalised across the shapes the various files use. */
 interface CanvasItem {
-  title?: string | null
-  subject?: string
-  description?: string | null
-  dueAt?: string | null
-  pointsPossible?: number
-  priority?: Priority
+  title?: string | null;
+  subject?: string;
+  description?: string | null;
+  dueAt?: string | null;
+  pointsPossible?: number;
+  priority?: Priority;
 }
 
 function canvasPriority(item: CanvasItem): Priority {
-  if (item.priority) return item.priority
-  const points = typeof item.pointsPossible === "number" ? item.pointsPossible : 0
-  return points >= 5 ? "high" : points >= 3 ? "medium" : "low"
+  if (item.priority) return item.priority;
+  const points = typeof item.pointsPossible === "number" ? item.pointsPossible : 0;
+  return points >= 5 ? "high" : points >= 3 ? "medium" : "low";
 }
 
 /**
@@ -62,13 +80,13 @@ function canvasPriority(item: CanvasItem): Priority {
  * west of Greenwich.
  */
 function pushAssignment(target: ParsedAssignment[], item: CanvasItem) {
-  if (!item.title || !item.dueAt) return
+  if (!item.title || !item.dueAt) return;
 
-  const parsed = parseDueDate(item.dueAt)
-  if (!isValidDate(parsed)) return
+  const parsed = parseDueDate(item.dueAt);
+  if (!isValidDate(parsed)) return;
 
-  const dueDate = parsed.toISOString()
-  if (target.some((a) => a.title === item.title && a.due_date === dueDate)) return
+  const dueDate = parsed.toISOString();
+  if (target.some((a) => a.title === item.title && a.due_date === dueDate)) return;
 
   target.push({
     title: item.title,
@@ -76,64 +94,66 @@ function pushAssignment(target: ParsedAssignment[], item: CanvasItem) {
     description: item.description || null,
     due_date: dueDate,
     priority: canvasPriority(item),
-  })
+  });
 }
 
 /** An arbitrary object out of `JSON.parse`, before we have established anything about its shape. */
 // biome-ignore lint/suspicious/noExplicitAny: the file being imported is untrusted third-party JSON
-type ParsedJson = Record<string, any>
+type ParsedJson = Record<string, any>;
 
 /** Canvas COURSE_DATA, from either a `.json` export or the `window.COURSE_DATA` of a `.js` file. */
 function collectCourseData(data: ParsedJson, target: ParsedAssignment[]) {
-  const subject = data.title || "Imported"
+  const subject = data.title || "Imported";
   const fromCourseItem = (item: ParsedJson): CanvasItem => ({
     title: item.title,
     subject,
     description: item.content,
     dueAt: item.dueAt,
     pointsPossible: item.pointsPossible,
-  })
+  });
 
   for (const module of data.modules ?? []) {
     for (const item of module.items ?? []) {
       if (item.type === "Assignment" || item.type === "Quizzes::Quiz") {
-        pushAssignment(target, fromCourseItem(item))
+        pushAssignment(target, fromCourseItem(item));
       }
     }
   }
 
-  for (const item of data.assignments ?? []) pushAssignment(target, fromCourseItem(item))
-  for (const item of data.quizzes ?? []) pushAssignment(target, fromCourseItem(item))
+  for (const item of data.assignments ?? []) pushAssignment(target, fromCourseItem(item));
+  for (const item of data.quizzes ?? []) pushAssignment(target, fromCourseItem(item));
 }
 
 const PRESET_THEMES = [
   { id: "system", name: "System" },
   { id: "light", name: "Light" },
   { id: "dark", name: "Dark" },
-]
+];
 
 export function SettingsContent({ user }: SettingsContentProps) {
-  const searchParams = useSearchParams()
-  const tabFromUrl = searchParams.get("tab")
-  const defaultTab = tabFromUrl === "appearance" ? "appearance" : "general"
-  
-  const { theme, setTheme } = useTheme()
-  const { isCompact, setIsCompact } = useCompactMode()
-  const { colorTheme: selectedColorTheme, setColorTheme, customThemes, setCustomThemes } = useColorTheme()
-  const [isAddingTheme, setIsAddingTheme] = useState(false)
-  const [editingTheme, setEditingTheme] = useState<CustomTheme | null>(null)
-  
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const defaultTab = tabFromUrl === "appearance" ? "appearance" : "general";
+
+  const { theme, setTheme } = useTheme();
+  const { isCompact, setIsCompact } = useCompactMode();
+  const { colorTheme: selectedColorTheme, setColorTheme, customThemes, setCustomThemes } = useColorTheme();
+  const [isAddingTheme, setIsAddingTheme] = useState(false);
+  const [editingTheme, setEditingTheme] = useState<CustomTheme | null>(null);
+
   // Assignment import state
-  const [canvasImportStatus, setCanvasImportStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
-  const [canvasImportMessage, setCanvasImportMessage] = useState("")
-  const [parsedAssignments, setParsedAssignments] = useState<ParsedAssignment[]>([])
-  const [selectedAssignments, setSelectedAssignments] = useState<Set<number>>(new Set())
-  const [importDialogOpen, setImportDialogOpen] = useState(false)
-  const [isImporting, setIsImporting] = useState(false)
-  const [googleClassroomStatus, setGoogleClassroomStatus] = useState<"idle" | "loading" | "connected" | "error">("idle")
-  const canvasFileInputRef = useRef<HTMLInputElement>(null)
-  const { mutate } = useSWRConfig()
-  const timeZone = useTimeZone()
+  const [canvasImportStatus, setCanvasImportStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [canvasImportMessage, setCanvasImportMessage] = useState("");
+  const [parsedAssignments, setParsedAssignments] = useState<ParsedAssignment[]>([]);
+  const [selectedAssignments, setSelectedAssignments] = useState<Set<number>>(new Set());
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [googleClassroomStatus, setGoogleClassroomStatus] = useState<"idle" | "loading" | "connected" | "error">(
+    "idle",
+  );
+  const canvasFileInputRef = useRef<HTMLInputElement>(null);
+  const { mutate } = useSWRConfig();
+  const timeZone = useTimeZone();
 
   const [newTheme, setNewTheme] = useState<CustomTheme>({
     id: "",
@@ -145,23 +165,23 @@ export function SettingsContent({ user }: SettingsContentProps) {
       card: "#ffffff",
       accent: "#f1f5f9",
     },
-  })
+  });
 
   const handleColorThemeChange = (value: string) => {
-    setColorTheme(value)
-  }
+    setColorTheme(value);
+  };
 
   const handleAddTheme = () => {
-    if (!newTheme.name.trim()) return
+    if (!newTheme.name.trim()) return;
 
     const theme: CustomTheme = {
       ...newTheme,
       id: `${newTheme.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
-    }
+    };
 
-    const updatedThemes = [...customThemes, theme]
-    setCustomThemes(updatedThemes)
-    setIsAddingTheme(false)
+    const updatedThemes = [...customThemes, theme];
+    setCustomThemes(updatedThemes);
+    setIsAddingTheme(false);
     setNewTheme({
       id: "",
       name: "",
@@ -172,43 +192,43 @@ export function SettingsContent({ user }: SettingsContentProps) {
         card: "#ffffff",
         accent: "#f1f5f9",
       },
-    })
-  }
+    });
+  };
 
   const handleDeleteTheme = (themeId: string) => {
-    const updatedThemes = customThemes.filter((t) => t.id !== themeId)
-    setCustomThemes(updatedThemes)
+    const updatedThemes = customThemes.filter((t) => t.id !== themeId);
+    setCustomThemes(updatedThemes);
     if (selectedColorTheme === themeId) {
-      handleColorThemeChange("default")
+      handleColorThemeChange("default");
     }
-  }
+  };
 
   const handleEditTheme = (theme: CustomTheme) => {
-    setEditingTheme(theme)
-    setNewTheme({ ...theme })
-    setIsAddingTheme(false)
-  }
+    setEditingTheme(theme);
+    setNewTheme({ ...theme });
+    setIsAddingTheme(false);
+  };
 
   const handleSaveEdit = () => {
-    if (!editingTheme || !newTheme.name.trim()) return
+    if (!editingTheme || !newTheme.name.trim()) return;
 
     const updatedThemes = customThemes.map((t) =>
-      t.id === editingTheme.id ? { ...newTheme, id: editingTheme.id } : t
-    )
-    setCustomThemes(updatedThemes)
-    
+      t.id === editingTheme.id ? { ...newTheme, id: editingTheme.id } : t,
+    );
+    setCustomThemes(updatedThemes);
+
     // Re-apply if this theme is currently selected
     if (selectedColorTheme === editingTheme.id) {
       // Force re-apply by setting to default then back
-      setColorTheme("default")
-      setTimeout(() => setColorTheme(editingTheme.id), 0)
+      setColorTheme("default");
+      setTimeout(() => setColorTheme(editingTheme.id), 0);
     }
-    
-    handleCancelEdit()
-  }
+
+    handleCancelEdit();
+  };
 
   const handleCancelEdit = () => {
-    setEditingTheme(null)
+    setEditingTheme(null);
     setNewTheme({
       id: "",
       name: "",
@@ -219,31 +239,31 @@ export function SettingsContent({ user }: SettingsContentProps) {
         card: "#ffffff",
         accent: "#f1f5f9",
       },
-    })
-  }
+    });
+  };
 
   // Canvas CSV/file import handler
   const handleCanvasFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    setCanvasImportStatus("loading")
-    setCanvasImportMessage("")
-    setParsedAssignments([])
+    setCanvasImportStatus("loading");
+    setCanvasImportMessage("");
+    setParsedAssignments([]);
 
     try {
-      const text = await file.text()
-      const assignments: ParsedAssignment[] = []
+      const text = await file.text();
+      const assignments: ParsedAssignment[] = [];
 
       if (file.name.endsWith(".json")) {
-        const data = JSON.parse(text)
+        const data = JSON.parse(text);
 
         if (data.modules || data.assignments) {
           // Canvas COURSE_DATA format (from course-data.js converted to .json)
-          collectCourseData(data, assignments)
+          collectCourseData(data, assignments);
         } else {
           // Fallback for simpler JSON formats
-          const items = Array.isArray(data) ? data : data.items || []
+          const items = Array.isArray(data) ? data : data.items || [];
           for (const item of items) {
             pushAssignment(assignments, {
               title: item.title || item.name || item.assignment_name,
@@ -251,91 +271,95 @@ export function SettingsContent({ user }: SettingsContentProps) {
               description: item.description,
               dueAt: item.due_date || item.due_at || item.dueAt,
               priority: "medium",
-            })
+            });
           }
         }
       } else if (file.name.endsWith(".js")) {
         // Parse Canvas course-data.js format (window.COURSE_DATA = {...})
-        const jsonMatch = text.match(/window\.COURSE_DATA\s*=\s*(\{[\s\S]*\})/)
+        const jsonMatch = text.match(/window\.COURSE_DATA\s*=\s*(\{[\s\S]*\})/);
         if (!jsonMatch) {
-          throw new Error("Could not find COURSE_DATA in JavaScript file")
+          throw new Error("Could not find COURSE_DATA in JavaScript file");
         }
-        collectCourseData(JSON.parse(jsonMatch[1]), assignments)
+        collectCourseData(JSON.parse(jsonMatch[1]), assignments);
       } else if (file.name.endsWith(".xml") || file.name.endsWith(".imscc")) {
         // Parse IMS Common Cartridge (Canvas export format)
-        const parser = new DOMParser()
-        const doc = parser.parseFromString(text, "text/xml")
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "text/xml");
 
         // Look for assignment items in various formats
-        const items = doc.querySelectorAll("item, assignment, resource")
+        const items = doc.querySelectorAll("item, assignment, resource");
         items.forEach((item) => {
           pushAssignment(assignments, {
             title: item.querySelector("title")?.textContent || item.getAttribute("title"),
             description: item.querySelector("description, text")?.textContent,
             dueAt: item.querySelector("due_at, due_date, date")?.textContent,
             priority: "medium",
-          })
-        })
+          });
+        });
       }
 
       if (assignments.length > 0) {
-        setParsedAssignments(assignments)
-        setCanvasImportStatus("success")
-        setCanvasImportMessage(`Found ${assignments.length} assignment${assignments.length > 1 ? "s" : ""} ready to import`)
+        setParsedAssignments(assignments);
+        setCanvasImportStatus("success");
+        setCanvasImportMessage(
+          `Found ${assignments.length} assignment${assignments.length > 1 ? "s" : ""} ready to import`,
+        );
       } else {
-        setCanvasImportStatus("error")
-        setCanvasImportMessage("No assignments found in file. Make sure the file contains assignment data with titles and due dates.")
+        setCanvasImportStatus("error");
+        setCanvasImportMessage(
+          "No assignments found in file. Make sure the file contains assignment data with titles and due dates.",
+        );
       }
     } catch {
-      setCanvasImportStatus("error")
-      setCanvasImportMessage("Failed to parse file. Please check the file format.")
+      setCanvasImportStatus("error");
+      setCanvasImportMessage("Failed to parse file. Please check the file format.");
     }
 
     // Reset file input
     if (canvasFileInputRef.current) {
-      canvasFileInputRef.current.value = ""
+      canvasFileInputRef.current.value = "";
     }
-  }
+  };
 
   // Assignment selection helpers
   const handleSelectAll = () => {
-    setSelectedAssignments(new Set(parsedAssignments.map((_, idx) => idx)))
-  }
+    setSelectedAssignments(new Set(parsedAssignments.map((_, idx) => idx)));
+  };
 
   const handleSelectNone = () => {
-    setSelectedAssignments(new Set())
-  }
+    setSelectedAssignments(new Set());
+  };
 
   const handleSelectFuture = () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const futureIndices = parsedAssignments
       .map((a, idx) => ({ idx, date: parseDueDate(a.due_date) }))
       .filter(({ date }) => date >= today)
-      .map(({ idx }) => idx)
-    setSelectedAssignments(new Set(futureIndices))
-  }
+      .map(({ idx }) => idx);
+    setSelectedAssignments(new Set(futureIndices));
+  };
 
   const toggleAssignment = (idx: number) => {
-    const newSelected = new Set(selectedAssignments)
+    const newSelected = new Set(selectedAssignments);
     if (newSelected.has(idx)) {
-      newSelected.delete(idx)
+      newSelected.delete(idx);
     } else {
-      newSelected.add(idx)
+      newSelected.add(idx);
     }
-    setSelectedAssignments(newSelected)
-  }
+    setSelectedAssignments(newSelected);
+  };
 
   const handleImportAssignments = async () => {
-    const assignmentsToImport = parsedAssignments.filter((_, idx) => selectedAssignments.has(idx))
-    
-    if (assignmentsToImport.length === 0) return
+    const assignmentsToImport = parsedAssignments.filter((_, idx) => selectedAssignments.has(idx));
 
-    setIsImporting(true)
+    if (assignmentsToImport.length === 0) return;
+
+    setIsImporting(true);
 
     try {
-      const supabase = createClient()
-      
+      const supabase = createClient();
+
       // Prepare assignments for database insertion
       const assignmentsToInsert = assignmentsToImport.map((a) => ({
         user_id: user.id,
@@ -345,62 +369,70 @@ export function SettingsContent({ user }: SettingsContentProps) {
         due_date: a.due_date,
         priority: a.priority,
         status: "pending" as const,
-      }))
+      }));
 
-      const { error } = await supabase.from("assignments").insert(assignmentsToInsert)
+      const { error } = await supabase.from("assignments").insert(assignmentsToInsert);
 
       if (error) {
-        console.error("Error importing assignments:", error)
-        setCanvasImportMessage(`Failed to import: ${error.message}`)
-        setCanvasImportStatus("error")
+        console.error("Error importing assignments:", error);
+        setCanvasImportMessage(`Failed to import: ${error.message}`);
+        setCanvasImportStatus("error");
       } else {
         // Refresh assignments data
-        mutate("assignments")
-        setCanvasImportMessage(`Successfully imported ${assignmentsToImport.length} assignment${assignmentsToImport.length !== 1 ? "s" : ""}!`)
-        setImportDialogOpen(false)
-        setSelectedAssignments(new Set())
+        mutate("assignments");
+        setCanvasImportMessage(
+          `Successfully imported ${assignmentsToImport.length} assignment${assignmentsToImport.length !== 1 ? "s" : ""}!`,
+        );
+        setImportDialogOpen(false);
+        setSelectedAssignments(new Set());
         // Reset parsed assignments after successful import
-        setParsedAssignments([])
-        setCanvasImportStatus("idle")
+        setParsedAssignments([]);
+        setCanvasImportStatus("idle");
       }
     } catch (err) {
-      console.error("Error importing assignments:", err)
-      setCanvasImportMessage("An unexpected error occurred while importing")
-      setCanvasImportStatus("error")
+      console.error("Error importing assignments:", err);
+      setCanvasImportMessage("An unexpected error occurred while importing");
+      setCanvasImportStatus("error");
     } finally {
-      setIsImporting(false)
+      setIsImporting(false);
     }
-  }
+  };
 
   // Google Classroom OAuth handler (placeholder)
   const handleGoogleClassroomConnect = () => {
-    setGoogleClassroomStatus("loading")
+    setGoogleClassroomStatus("loading");
     // TODO: Implement actual Google Classroom OAuth flow
     // This would redirect to Google OAuth consent screen
     setTimeout(() => {
-      setGoogleClassroomStatus("idle")
-      alert("Sorry, this feature isn't fully finished yet, just a placeholder for now!")
-    }, 1000)
-  }
+      setGoogleClassroomStatus("idle");
+      alert("Sorry, this feature isn't fully finished yet, just a placeholder for now!");
+    }, 1000);
+  };
 
   const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return "Not available"
+    if (!dateString) return "Not available";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
-    })
-  }
+    });
+  };
 
-  const initials = user.email ? user.email.substring(0, 2).toUpperCase() : "U"
-  const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User"
+  const initials = user.email ? user.email.substring(0, 2).toUpperCase() : "U";
+  const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User";
 
   return (
     <Tabs defaultValue={defaultTab} className="w-full">
       <TabsList className="w-full">
-        <TabsTrigger value="general" className="flex-1">General</TabsTrigger>
-        <TabsTrigger value="assignments" className="flex-1">Assignments</TabsTrigger>
-        <TabsTrigger value="appearance" className="flex-1">Appearance</TabsTrigger>
+        <TabsTrigger value="general" className="flex-1">
+          General
+        </TabsTrigger>
+        <TabsTrigger value="assignments" className="flex-1">
+          Assignments
+        </TabsTrigger>
+        <TabsTrigger value="appearance" className="flex-1">
+          Appearance
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="general" className="mt-6 space-y-6">
@@ -471,9 +503,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
               <GoogleIcon className="h-5 w-5" />
               Google Classroom
             </CardTitle>
-            <CardDescription>
-              Connect your Google Classroom account to automatically import assignments
-            </CardDescription>
+            <CardDescription>Connect your Google Classroom account to automatically import assignments</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -500,9 +530,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                   disabled={googleClassroomStatus === "loading"}
                   variant={googleClassroomStatus === "connected" ? "outline" : "default"}
                 >
-                  {googleClassroomStatus === "loading" && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
+                  {googleClassroomStatus === "loading" && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   {googleClassroomStatus === "connected" ? "Disconnect" : "Connect"}
                 </Button>
               </div>
@@ -592,7 +620,8 @@ export function SettingsContent({ user }: SettingsContentProps) {
                         </div>
                         <div className="flex-1 overflow-y-auto border rounded-lg divide-y min-h-0">
                           {parsedAssignments.map((assignment, idx) => {
-                            const isPast = parseDueDate(assignment.due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                            const isPast =
+                              parseDueDate(assignment.due_date) < new Date(new Date().setHours(0, 0, 0, 0));
                             return (
                               // biome-ignore lint/a11y/noLabelWithoutControl: the control is the Radix Checkbox below, which Biome cannot see through
                               <label
@@ -607,12 +636,13 @@ export function SettingsContent({ user }: SettingsContentProps) {
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium text-sm truncate">{assignment.title}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    {assignment.subject} • Due: {formatDueDate(parseDueDate(assignment.due_date), timeZone)}
+                                    {assignment.subject} • Due:{" "}
+                                    {formatDueDate(parseDueDate(assignment.due_date), timeZone)}
                                     {isPast && " (Past)"}
                                   </p>
                                 </div>
                               </label>
-                            )
+                            );
                           })}
                         </div>
                         <div className="flex justify-between items-center pt-4 border-t">
@@ -634,7 +664,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                       </DialogContent>
                     </Dialog>
                   </div>
-                  
+
                   <div className="max-h-48 overflow-y-auto border rounded-lg divide-y">
                     {parsedAssignments.slice(0, 5).map((assignment, idx) => (
                       <div key={idx} className="p-3 text-sm">
@@ -711,11 +741,13 @@ export function SettingsContent({ user }: SettingsContentProps) {
                       {t.name}
                     </SelectItem>
                   ))}
-                  {customThemes.filter(t => !DEFAULT_CUSTOM_THEMES.find(d => d.id === t.id)).map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name} (Custom)
-                    </SelectItem>
-                  ))}
+                  {customThemes
+                    .filter((t) => !DEFAULT_CUSTOM_THEMES.find((d) => d.id === t.id))
+                    .map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name} (Custom)
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -739,16 +771,18 @@ export function SettingsContent({ user }: SettingsContentProps) {
                   title={t.name}
                 />
               ))}
-              {customThemes.filter(t => !DEFAULT_CUSTOM_THEMES.find(d => d.id === t.id)).map((t) => (
-                <button
-                  type="button"
-                  key={t.id}
-                  onClick={() => handleColorThemeChange(t.id)}
-                  className={`h-8 rounded-md border-2 transition-all ${selectedColorTheme === t.id ? "border-foreground" : "border-transparent"}`}
-                  style={{ backgroundColor: t.colors.primary }}
-                  title={t.name}
-                />
-              ))}
+              {customThemes
+                .filter((t) => !DEFAULT_CUSTOM_THEMES.find((d) => d.id === t.id))
+                .map((t) => (
+                  <button
+                    type="button"
+                    key={t.id}
+                    onClick={() => handleColorThemeChange(t.id)}
+                    className={`h-8 rounded-md border-2 transition-all ${selectedColorTheme === t.id ? "border-foreground" : "border-transparent"}`}
+                    style={{ backgroundColor: t.colors.primary }}
+                    title={t.name}
+                  />
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -760,42 +794,41 @@ export function SettingsContent({ user }: SettingsContentProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Custom themes list */}
-            {customThemes.filter(t => !DEFAULT_CUSTOM_THEMES.find(d => d.id === t.id)).length > 0 && (
+            {customThemes.filter((t) => !DEFAULT_CUSTOM_THEMES.find((d) => d.id === t.id)).length > 0 && (
               <div className="space-y-2">
-                {customThemes.filter(t => !DEFAULT_CUSTOM_THEMES.find(d => d.id === t.id)).map((t) => (
-                  <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="h-6 w-6 rounded-full"
-                        style={{ backgroundColor: t.colors.primary }}
-                      />
-                      <span className="font-medium">{t.name}</span>
+                {customThemes
+                  .filter((t) => !DEFAULT_CUSTOM_THEMES.find((d) => d.id === t.id))
+                  .map((t) => (
+                    <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border">
+                      <div className="flex items-center gap-3">
+                        <div className="h-6 w-6 rounded-full" style={{ backgroundColor: t.colors.primary }} />
+                        <span className="font-medium">{t.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditTheme(t)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteTheme(t.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditTheme(t)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteTheme(t.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
 
             {/* Add/Edit theme form */}
-            {(isAddingTheme || editingTheme) ? (
+            {isAddingTheme || editingTheme ? (
               <div className="space-y-4 p-4 border rounded-lg">
                 <div className="grid gap-2">
                   <Label htmlFor="theme-name">{editingTheme ? "Edit Theme Name" : "Theme Name"}</Label>
@@ -877,23 +910,15 @@ export function SettingsContent({ user }: SettingsContentProps) {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="compact-mode">Compact Mode</Label>
-                <p className="text-sm text-muted-foreground">
-                  Reduce padding and spacing for a denser interface
-                </p>
+                <p className="text-sm text-muted-foreground">Reduce padding and spacing for a denser interface</p>
               </div>
-              <Switch
-                id="compact-mode"
-                checked={isCompact}
-                onCheckedChange={setIsCompact}
-              />
+              <Switch id="compact-mode" checked={isCompact} onCheckedChange={setIsCompact} />
             </div>
           </CardContent>
         </Card>
       </TabsContent>
 
-      <p className="mt-10 text-center text-sm text-muted-foreground/70">
-        Tip: Click on the Evermind logo to go home!
-      </p>
+      <p className="mt-10 text-center text-sm text-muted-foreground/70">Tip: Click on the Evermind logo to go home!</p>
     </Tabs>
-  )
+  );
 }

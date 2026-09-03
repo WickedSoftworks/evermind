@@ -1,39 +1,47 @@
-"use client"
+"use client";
 
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { BookOpen, LogOut, User, Settings } from "lucide-react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import type { User as SupabaseUser } from "@supabase/supabase-js"
-import { ThemeToggle } from "@/components/theme-toggle"
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { BookOpen, LogOut, Settings, User } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { createClient } from "@/lib/supabase/client";
 
 interface HeaderProps {
-  user: SupabaseUser
-  isPreview?: boolean
+  user: SupabaseUser;
+  isPreview?: boolean;
 }
 
 export function Header({ user, isPreview = false }: HeaderProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   const handleSignOut = async () => {
     if (isPreview) {
-      router.push("/auth/login")
-      return
+      router.push("/auth/login");
+      return;
     }
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/auth/login")
-  }
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/auth/login");
+  };
 
-  const initials = user.email ? user.email.substring(0, 2).toUpperCase() : "U"
+  const initials = user.email ? user.email.substring(0, 2).toUpperCase() : "U";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 w-full items-center justify-between px-6 md:px-10 lg:px-16">
-        <Link href="/dashboard" className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity cursor-pointer">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity cursor-pointer"
+        >
           <BookOpen className="h-6 w-6" />
           <span className="text-xl font-bold">Evermind</span>
           {isPreview && (
@@ -84,5 +92,5 @@ export function Header({ user, isPreview = false }: HeaderProps) {
         </div>
       </div>
     </header>
-  )
+  );
 }

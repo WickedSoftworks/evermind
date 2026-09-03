@@ -1,36 +1,30 @@
-"use client"
+"use client";
 
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle
-} from "@/components/ui/card"
-import { useState } from "react"
-import { BookOpen } from "lucide-react"
-import GoogleIcon from "@/components/icons/GoogleIcon"
-import DiscordIcon from "@/components/icons/DiscordIcon"
-import GitHubIcon from "@/components/icons/GitHubIcon"
-import Link from "next/link"
+import { BookOpen } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import DiscordIcon from "@/components/icons/DiscordIcon";
+import GitHubIcon from "@/components/icons/GitHubIcon";
+import GoogleIcon from "@/components/icons/GoogleIcon";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState<"google" | "discord" | "github" | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState<"google" | "discord" | "github" | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const getRedirectUrl = () => {
-    const currentUrl = typeof window !== 'undefined' ? window.location.origin : ''
-    return currentUrl.includes('localhost') 
-      ? 'http://localhost:3000/auth/callback'
-      : `${window.location.origin}/auth/callback`
-  }
+    const currentUrl = typeof window !== "undefined" ? window.location.origin : "";
+    return currentUrl.includes("localhost")
+      ? "http://localhost:3000/auth/callback"
+      : `${window.location.origin}/auth/callback`;
+  };
 
   const handleGoogleLogin = async () => {
-    const supabase = createClient()
-    setIsLoading("google")
-    setError(null)
+    const supabase = createClient();
+    setIsLoading("google");
+    setError(null);
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -38,18 +32,18 @@ export default function LoginPage() {
         options: {
           redirectTo: getRedirectUrl(),
         },
-      })
-      if (error) throw error
+      });
+      if (error) throw error;
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
-      setIsLoading(null)
+      setError(error instanceof Error ? error.message : "An error occurred");
+      setIsLoading(null);
     }
-  }
+  };
 
   const handleDiscordLogin = async () => {
-    const supabase = createClient()
-    setIsLoading("discord")
-    setError(null)
+    const supabase = createClient();
+    setIsLoading("discord");
+    setError(null);
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -57,18 +51,18 @@ export default function LoginPage() {
         options: {
           redirectTo: getRedirectUrl(),
         },
-      })
-      if (error) throw error
+      });
+      if (error) throw error;
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
-      setIsLoading(null)
+      setError(error instanceof Error ? error.message : "An error occurred");
+      setIsLoading(null);
     }
-  }
+  };
 
   const handleGitHubLogin = async () => {
-    const supabase = createClient()
-    setIsLoading("github")
-    setError(null)
+    const supabase = createClient();
+    setIsLoading("github");
+    setError(null);
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -76,13 +70,13 @@ export default function LoginPage() {
         options: {
           redirectTo: getRedirectUrl(),
         },
-      })
-      if (error) throw error
+      });
+      if (error) throw error;
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
-      setIsLoading(null)
+      setError(error instanceof Error ? error.message : "An error occurred");
+      setIsLoading(null);
     }
-  }
+  };
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-background p-6 md:p-10">
@@ -135,12 +129,15 @@ export default function LoginPage() {
           </Card>
           <div className="text-center space-y-2">
             <p className="text-xs text-muted-foreground">Track your assignments and never miss a deadline</p>
-            <Link href="/privacy" className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+            <Link
+              href="/privacy"
+              className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+            >
               Privacy Policy
             </Link>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
