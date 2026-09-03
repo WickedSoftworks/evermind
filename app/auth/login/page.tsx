@@ -2,7 +2,13 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle
+} from "@/components/ui/card"
 import { useState } from "react"
 import { BookOpen } from "lucide-react"
 import GoogleIcon from "@/components/icons/GoogleIcon"
@@ -18,7 +24,7 @@ export default function LoginPage() {
     const currentUrl = typeof window !== 'undefined' ? window.location.origin : ''
     return currentUrl.includes('localhost') 
       ? 'http://localhost:3000/auth/callback'
-      : 'https://evermind.shxrk.dev/auth/callback'
+      : `${window.location.origin}/auth/callback`
   }
 
   const handleGoogleLogin = async () => {
