@@ -1,5 +1,5 @@
 export type Priority = "low" | "medium" | "high"
-export type Status = "pending" | "completed" | "overdue"
+export type Status = "pending" | "completed"
 
 export interface Assignment {
   id: string
