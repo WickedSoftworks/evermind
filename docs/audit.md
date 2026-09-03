@@ -147,56 +147,16 @@ exploitable — but the safety comes entirely from a default the app does not se
 `Origin`/`Sec-Fetch-Site` check costs three lines and removes the dependency on that default. Separately,
 nothing anywhere is rate limited: sign-in attempts, imports, and writes are all unthrottled.
 
-#### M11 — TypeScript errors are ignored at build time
-
-`next.config.mjs:3-5` sets `typescript.ignoreBuildErrors: true`. Combined with the absence of a working
-`lint` script (see M12) and any tests, nothing at all gates a broken commit. This flag is a scaffolding
-default from the generator; it should not survive into a real deployment.
-
-#### M12 — The `lint` script cannot run
-
-`package.json` declares `"lint": "eslint ."`, but there is no ESLint configuration file anywhere in the repo
-and neither `eslint` nor `eslint-config-next` appears in `devDependencies`. The command fails immediately.
-
-#### M13 — An unpinned dependency
-
-`"@supabase/supabase-js": "latest"` in `package.json`. Every other dependency is pinned or caret-ranged. A
-committed `bun.lock` makes this reproducible *today*, but any refresh of the lockfile silently pulls whatever
-the newest release is, including a major version. Pin it.
-
 ### 2.4 Low
 
-- **L1 — `removeConsole` strips server diagnostics.** `next.config.mjs:23-26` removes `console.*` in
-  production, which also removes `console.error("Account deletion failed:", ...)` in the delete route — the
-  only diagnostic that route has. Use `removeConsole: { exclude: ["error"] }`.
-- **L2 — Dead code.** `fetchUserAndDashboardData` (`lib/data/dashboard.ts:36-56`) has no callers.
-  `components/ui/use-mobile.tsx` and `components/ui/use-toast.ts` duplicate the `hooks/` versions and are
-  unreferenced.
-- **L3 — 39 unused UI modules.** Only 21 of the 60 files in `components/ui` are imported. The unused ones
-  drag in `recharts`, `embla-carousel-react`, `react-resizable-panels`, `input-otp`, `cmdk` and
-  `react-hook-form` as dependencies. Nothing in the app uses React Hook Form at all — every form is
-  hand-rolled `useState` — yet the README lists it in the tech stack.
-- **L4 — Cargo-culted `Promise.all`.** `lib/data/dashboard.ts:19-27` and `app/dashboard/page.tsx:24-27` wrap
-  a *single* promise in `Promise.all` under comments describing parallel fetching. Harmless, but the comments
-  claim a behaviour the code does not have.
 - **L5 — Deleting an assignment has no confirmation.** `assignment-card.tsx:139-142` deletes on a single
   dropdown click, irreversibly, with no undo. Deleting an *account* is guarded by typing your email address;
   deleting a week's work is not guarded at all.
-- **L6 — Preview mock data drifts for up to an hour.** `app/preview/page.tsx:6` sets `revalidate = 3600`, so
-  "due in 2 days" is computed at cache-fill time. Crossing midnight inside that window makes the preview's
-  own labels inconsistent. Rendering the preview data on the client would remove the problem.
-- **L7 — The logo always links to `/dashboard`.** `header.tsx:39`, including in preview mode, so a
-  signed-out visitor clicking the wordmark is bounced to the login page.
-- **L8 — Stale metadata.** `app/layout.tsx:22` still declares `generator: "v0.app"`.
 - **L9 — The privacy policy over-promises.** It offers data export ("request exportation of your data"),
   which the app cannot do, and gives a contact address at `evermind.today` while the deployment lives at
   `evermind.shxrk.dev`.
 - **L10 — No error boundaries.** There is no `error.tsx`, `global-error.tsx` or `not-found.tsx` anywhere in
   `app/`. A thrown render error shows the default Next.js error screen.
-- **L11 — Unbounded text fields.** No `CHECK (length(title) <= n)` on any column and no `maxLength` on any
-  input. A single row can hold megabytes.
-- **L12 — Unbounded fetch.** `select("*")` with no `limit` or pagination on either the server or client
-  fetch. Fine at student scale; it has no ceiling.
 - **L13 — No `router.refresh()` after mutation.** SWR updates the client cache, but the server-rendered
   `initialData` for `/dashboard` is not invalidated, so a back-navigation into the App Router cache can show
   a stale list.
@@ -231,7 +191,6 @@ Things a user would reasonably expect a deadline tracker to have, which it does 
 
 ### 3.2 Infrastructure the project has grown into needing
 
-- **An ESLint configuration** that actually matches the declared `lint` script.
 - **A test suite.** The Canvas parser alone — four formats, date coercion, deduplication, priority
   inference — is pure, self-contained logic and would be straightforward to cover; it is also where the
   worst bugs are.
