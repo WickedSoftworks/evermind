@@ -208,7 +208,10 @@ export const colorThemeScript = `
         { id: "forest", primary: "oklch(0.5 0.15 145)" },
         { id: "sunset", primary: "oklch(0.6 0.2 25)" },
         { id: "lavender", primary: "oklch(0.55 0.2 280)" },
-        { id: "plasma", primary: "#f70088" }
+        { id: "plasma", primary: "#f70088" },
+        { id: "nightswim", primary: "#123678"  },
+        { id: "mint", primary: "#9cfea4"   },
+        { id: "candy", primary: "#fe94e1"  }
       ];
       
       var colorTheme = localStorage.getItem('evermind-color-theme');
