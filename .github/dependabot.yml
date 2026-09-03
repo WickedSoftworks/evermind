@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # Keeps the action versions pinned in .github/workflows current. Runtime
+  # dependencies are deliberately not covered: Dependabot's bun.lock support
+  # is newer than this project, so add a "npm" ecosystem entry only after
+  # confirming it updates the lockfile rather than only package.json.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore"
