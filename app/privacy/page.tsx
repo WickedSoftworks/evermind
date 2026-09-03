@@ -59,6 +59,7 @@ export default function PrivacyPage() {
             <br></br>
             You could also request exportation / deletion of your data at any time by contacting us at {" "}
             <button
+              type="button"
               onClick={handleCopyEmail}
               className="underline decoration-solid cursor-pointer hover:opacity-70 transition-opacity"
             >
@@ -99,6 +100,7 @@ export default function PrivacyPage() {
           <p>
             If you have any questions about this Privacy Policy, please contact us at{" "}
             <button
+              type="button"
               onClick={handleCopyEmail}
               className="underline decoration-solid cursor-pointer hover:opacity-70 transition-opacity"
             >

@@ -68,7 +68,7 @@ export function AddAssignmentDialog() {
     // Combine date and time
     const [hours, minutes] = dueTime.split(":")
     const combinedDateTime = new Date(dueDate)
-    combinedDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+    combinedDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0)
 
     await supabase.from("assignments").insert({
       user_id: user.id,

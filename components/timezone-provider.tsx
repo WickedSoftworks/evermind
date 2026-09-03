@@ -32,6 +32,7 @@ export function TimeZoneProvider({ initialTimeZone, children }: TimeZoneProvider
     const resolved = resolveBrowserTimeZone()
     if (resolved === timeZone) return
     // A year, refreshed on every visit; it is re-set automatically if the user travels.
+    // biome-ignore lint/suspicious/noDocumentCookie: the CookieStore API this rule prefers is not available in Safari or Firefox
     document.cookie = `${TIMEZONE_COOKIE}=${encodeURIComponent(resolved)}; path=/; max-age=31536000; samesite=lax`
     setTimeZone(resolved)
   }, [timeZone])

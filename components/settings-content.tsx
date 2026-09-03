@@ -21,7 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import GoogleIcon from "@/components/icons/GoogleIcon"
 import { DeleteAccountDialog } from "@/components/delete-account-dialog"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
-import type { Assignment, Priority } from "@/lib/types"
+import type { Priority } from "@/lib/types"
 import { formatDueDate, isValidDate, parseDueDate } from "@/lib/dates"
 import { useTimeZone } from "@/components/timezone-provider"
 
@@ -79,10 +79,14 @@ function pushAssignment(target: ParsedAssignment[], item: CanvasItem) {
   })
 }
 
+/** An arbitrary object out of `JSON.parse`, before we have established anything about its shape. */
+// biome-ignore lint/suspicious/noExplicitAny: the file being imported is untrusted third-party JSON
+type ParsedJson = Record<string, any>
+
 /** Canvas COURSE_DATA, from either a `.json` export or the `window.COURSE_DATA` of a `.js` file. */
-function collectCourseData(data: Record<string, any>, target: ParsedAssignment[]) {
+function collectCourseData(data: ParsedJson, target: ParsedAssignment[]) {
   const subject = data.title || "Imported"
-  const fromCourseItem = (item: Record<string, any>): CanvasItem => ({
+  const fromCourseItem = (item: ParsedJson): CanvasItem => ({
     title: item.title,
     subject,
     description: item.content,
@@ -152,7 +156,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
 
     const theme: CustomTheme = {
       ...newTheme,
-      id: newTheme.name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now(),
+      id: `${newTheme.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
     }
 
     const updatedThemes = [...customThemes, theme]
@@ -282,7 +286,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
         setCanvasImportStatus("error")
         setCanvasImportMessage("No assignments found in file. Make sure the file contains assignment data with titles and due dates.")
       }
-    } catch (error) {
+    } catch {
       setCanvasImportStatus("error")
       setCanvasImportMessage("Failed to parse file. Please check the file format.")
     }
@@ -590,6 +594,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                           {parsedAssignments.map((assignment, idx) => {
                             const isPast = parseDueDate(assignment.due_date) < new Date(new Date().setHours(0, 0, 0, 0))
                             return (
+                              // biome-ignore lint/a11y/noLabelWithoutControl: the control is the Radix Checkbox below, which Biome cannot see through
                               <label
                                 key={idx}
                                 className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/50 ${isPast ? "opacity-60" : ""}`}
@@ -718,6 +723,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
             {/* Theme Preview Swatches */}
             <div className="grid grid-cols-4 gap-2 pt-2">
               <button
+                type="button"
                 onClick={() => handleColorThemeChange("default")}
                 className={`h-8 rounded-md border-2 transition-all ${selectedColorTheme === "default" ? "border-foreground" : "border-transparent"}`}
                 style={{ backgroundColor: "oklch(0.55 0.15 180)" }}
@@ -725,6 +731,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
               />
               {DEFAULT_CUSTOM_THEMES.map((t) => (
                 <button
+                  type="button"
                   key={t.id}
                   onClick={() => handleColorThemeChange(t.id)}
                   className={`h-8 rounded-md border-2 transition-all ${selectedColorTheme === t.id ? "border-foreground" : "border-transparent"}`}
@@ -734,6 +741,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
               ))}
               {customThemes.filter(t => !DEFAULT_CUSTOM_THEMES.find(d => d.id === t.id)).map((t) => (
                 <button
+                  type="button"
                   key={t.id}
                   onClick={() => handleColorThemeChange(t.id)}
                   className={`h-8 rounded-md border-2 transition-all ${selectedColorTheme === t.id ? "border-foreground" : "border-transparent"}`}

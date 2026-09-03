@@ -171,6 +171,7 @@ function toast({ ...props }: Toast) {
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: vendored shadcn hook; the subscription is deliberately keyed on state
   React.useEffect(() => {
     listeners.push(setState)
     return () => {

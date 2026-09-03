@@ -88,6 +88,7 @@ export default async function PreviewPage() {
     user_metadata: {
       avatar_url: null,
     },
+    // biome-ignore lint/suspicious/noExplicitAny: a stand-in for a Supabase User on a page that has no session
   } as any
 
   return (

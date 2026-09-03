@@ -48,7 +48,9 @@ export function DeleteAccountDialog({ email }: { email: string }) {
       return
     }
 
-    LOCAL_KEYS.forEach((key) => localStorage.removeItem(key))
+    LOCAL_KEYS.forEach((key) => {
+      localStorage.removeItem(key)
+    })
     router.replace("/auth/login")
   }
 

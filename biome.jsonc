@@ -1,0 +1,64 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": false,
+    // components/ui is vendored shadcn output, not code this project edits by hand.
+    "includes": ["**", "!**/components/ui", "!**/bun.lock"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
+  },
+  "css": {
+    "parser": {
+      // globals.css uses @tailwind / @apply.
+      "tailwindDirectives": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "next": "recommended",
+      "react": "recommended"
+    },
+    "rules": {
+      "preset": "recommended",
+      "a11y": {
+        // The icon components are decorative marks sitting next to visible text
+        // labels, so a title would be announced twice.
+        "noSvgWithoutTitle": "off"
+      },
+      "style": {
+        // process.env.NEXT_PUBLIC_SUPABASE_URL! is the documented Supabase
+        // pattern; the app cannot start without those vars set.
+        "noNonNullAssertion": "off"
+      },
+      "suspicious": {
+        // Every occurrence is either a fixed-length skeleton array or a parsed
+        // import list whose index *is* its identity (see selectedAssignments).
+        "noArrayIndexKey": "off"
+      }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

@@ -43,7 +43,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* These run before paint to stop a flash of the wrong theme. Both strings are
+            built in this repo from a fixed set of theme ids - no user input reaches them. */}
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: trusted, locally-authored FOUC script */}
         <script dangerouslySetInnerHTML={{ __html: compactModeScript }} />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: trusted, locally-authored FOUC script */}
         <script dangerouslySetInnerHTML={{ __html: colorThemeScript }} />
       </head>
       <body className={`font-sans antialiased`}>
