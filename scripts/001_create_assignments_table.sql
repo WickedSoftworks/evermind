@@ -19,6 +19,7 @@ ALTER TABLE assignments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view their own assignments"
   ON assignments FOR SELECT 
   USING (auth.uid() = user_id);
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert their own assignments" 
   ON assignments FOR INSERT 
