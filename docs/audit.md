@@ -43,30 +43,6 @@ worst failure mode a deadline tracker can have.
 
 Severity is judged by impact on a self-hosted deployment with real users.
 
-### 2.1 Critical
-
-#### C1 — The OAuth callback URL is hardcoded to the author's production domain
-
-`app/auth/login/page.tsx:17-22`
-
-```ts
-const getRedirectUrl = () => {
-  const currentUrl = typeof window !== 'undefined' ? window.location.origin : ''
-  return currentUrl.includes('localhost')
-    ? 'http://localhost:3000/auth/callback'
-    : 'https://evermind.shxrk.dev/auth/callback'
-}
-```
-
-Any deployment that is not on `localhost` sends its users to `evermind.shxrk.dev` to complete sign-in. A
-self-hoster following the README to the letter gets an app where sign-in silently hands off to somebody
-else's site — and it fails there too, since that origin's Supabase project will reject the code. It also
-breaks `localhost` on any port other than 3000, and breaks preview deployments.
-
-**Fix:** use `` `${window.location.origin}/auth/callback` ``, and let the Supabase project's redirect
-allow-list be the thing that constrains it. If a fixed public URL is genuinely wanted for the hosted
-instance, read it from `NEXT_PUBLIC_SITE_URL` with the origin as the fallback.
-
 #### C2 — The UPDATE row-level security policy has no `WITH CHECK`
 
 `scripts/001_create_assignments_table.sql:27-29`
@@ -101,26 +77,6 @@ Consider also revoking UPDATE on the `user_id` column outright — nothing in th
 
 ### 2.2 High
 
-#### H1 — Open redirect in the auth callback via `x-forwarded-host` and `next`
-
-`app/auth/callback/route.ts:9,15-21`
-
-```ts
-const next = searchParams.get("next") ?? "/dashboard"
-// ...
-const forwardedHost = request.headers.get("x-forwarded-host")
-if (forwardedHost) return NextResponse.redirect(`https://${forwardedHost}${next}`)
-```
-
-`x-forwarded-host` is a request header. On a platform that overwrites it (Vercel) this is safe; on a
-self-hosted deployment behind a reverse proxy that merely appends to it, or none at all, a caller controls
-where a *freshly authenticated* session lands. `next` is likewise taken from the query string and
-concatenated with no validation.
-
-**Fix:** drop the `forwardedHost` branch and redirect to `` `${origin}${next}` `` — `origin` already comes
-from the request URL that Next resolved. Validate `next` as a same-site path: reject anything that does not
-match `/^\/(?!\/)/`, which blocks both absolute URLs and protocol-relative `//evil.example` values.
-
 #### H2 — Every database write discards its error
 
 `components/assignment-card.tsx:76-104`, `components/add-assignment-dialog.tsx:73-82`,
@@ -145,31 +101,6 @@ goes essentially unused.
 keep the dialog open on failure. Better still, lift the six inline mutations into a small
 `lib/data/assignments.ts` that throws, and let one `useAssignmentMutation` hook own the error and revalidation
 handling.
-
-#### H3 — The Canvas CSV parser mangles most real CSV files
-
-`components/settings-content.tsx:181`
-
-```ts
-const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(/* ... */) || []
-```
-
-Two independent defects:
-
-- `[^",\s]+` excludes whitespace, and the lookahead requires the token to sit immediately before a comma or
-  end of line. An unquoted multi-word cell — `Math Homework Chapter 5`, which is exactly what a Canvas
-  export contains — matches only its **last word**.
-- Empty cells produce no match at all, so they are dropped from the array rather than preserved as `""`.
-  Every column after the first blank cell is then read from the wrong index: descriptions land in the title
-  field, course names in the due date.
-
-The column-detection heuristics above it (`settings-content.tsx:174-178`) compound this: `h.includes("date")`
-matches `created date` before it reaches `due date`, and `h.includes("name")` matches `course name` before
-`assignment name`, because `findIndex` returns the first hit in file order.
-
-**Fix:** replace the regex with a real CSV reader — a small state machine handling quoted fields, escaped
-quotes and embedded newlines, or a dependency such as `papaparse`. Score header candidates rather than taking
-the first substring hit, and let the user remap columns in the preview dialog when detection is wrong.
 
 #### H4 — `.imscc` import cannot work as written
 
