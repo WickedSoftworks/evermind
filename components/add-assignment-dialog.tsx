@@ -94,7 +94,7 @@ export function AddAssignmentDialog() {
           Add Assignment
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>Add New Assignment</DialogTitle>
           <DialogDescription>Add a new assignment to track. Fill in the details below.</DialogDescription>
