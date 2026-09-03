@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     unoptimized: true,
@@ -24,8 +24,10 @@ const nextConfig = {
   },
   // Compiler optimizations
   compiler: {
-    // Remove console logs in production
-    removeConsole: process.env.NODE_ENV === "production",
+    // There was a configuration to remove console logging in prod
+    // I personally think it's dumb ngl it makes it difficult to pin
+    // down an error, you can uncomment it if you want
+    // removeConsole: process.env.NODE_ENV === "production",
   },
 };
 
