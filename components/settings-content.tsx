@@ -163,42 +163,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
       const text = await file.text()
       const assignments: ParsedAssignment[] = []
 
-      if (file.name.endsWith(".csv")) {
-        // Parse Canvas CSV export
-        const lines = text.split("\n")
-        const headers = lines[0]?.toLowerCase().split(",").map(h => h.trim().replace(/"/g, ""))
-        
-        const titleIdx = headers?.findIndex(h => h.includes("title") || h.includes("name") || h.includes("assignment"))
-        const dueDateIdx = headers?.findIndex(h => h.includes("due") || h.includes("date"))
-        const descIdx = headers?.findIndex(h => h.includes("description") || h.includes("details"))
-        const courseIdx = headers?.findIndex(h => h.includes("course") || h.includes("subject") || h.includes("class"))
-
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i]?.trim()
-          if (!line) continue
-          
-          // Handle CSV with quoted fields
-          const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, "").trim()) || []
-          
-          const title = titleIdx !== undefined && titleIdx >= 0 ? values[titleIdx] : ""
-          const dueDate = dueDateIdx !== undefined && dueDateIdx >= 0 ? values[dueDateIdx] : ""
-          const description = descIdx !== undefined && descIdx >= 0 ? values[descIdx] : null
-          const course = courseIdx !== undefined && courseIdx >= 0 ? values[courseIdx] : "Imported"
-
-          if (title && dueDate) {
-            const parsedDate = new Date(dueDate)
-            if (!isNaN(parsedDate.getTime())) {
-              assignments.push({
-                title,
-                subject: course || "Imported",
-                description: description || null,
-                due_date: parsedDate.toISOString().split("T")[0],
-                priority: "medium",
-              })
-            }
-          }
-        }
-      } else if (file.name.endsWith(".json")) {
+      if (file.name.endsWith(".json")) {
         // Parse Canvas JSON export or similar
         const data = JSON.parse(text)
         const courseName = data.title || "Imported"
@@ -642,7 +607,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                 <input
                   ref={canvasFileInputRef}
                   type="file"
-                  accept=".csv,.json,.xml,.imscc,.js"
+                  accept=".json,.xml,.js"
                   onChange={handleCanvasFileImport}
                   className="hidden"
                   id="canvas-file-input"
