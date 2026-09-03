@@ -1,8 +1,10 @@
 import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getTimeZone } from "@/lib/timezone-server"
 import { Header } from "@/components/header"
 import { SettingsContent } from "@/components/settings-content"
+import { TimeZoneProvider } from "@/components/timezone-provider"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export const dynamic = 'force-dynamic'
@@ -41,7 +43,9 @@ export default async function SettingsPage() {
         <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">Settings</h1>
           <Suspense fallback={<SettingsLoading />}>
-            <SettingsContent user={data.user} />
+            <TimeZoneProvider initialTimeZone={await getTimeZone()}>
+              <SettingsContent user={data.user} />
+            </TimeZoneProvider>
           </Suspense>
         </div>
       </main>

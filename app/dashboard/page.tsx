@@ -2,8 +2,10 @@ import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { fetchDashboardData } from "@/lib/data/dashboard"
+import { getTimeZone } from "@/lib/timezone-server"
 import { Header } from "@/components/header"
 import { AssignmentsList } from "@/components/assignments-list"
+import { TimeZoneProvider } from "@/components/timezone-provider"
 import { Loader2 } from "lucide-react"
 
 export const dynamic = 'force-dynamic'
@@ -34,6 +36,7 @@ export default async function DashboardPage() {
 
   // Fetch dashboard data (assignments, etc.) - uses Promise.all internally
   const dashboardData = await fetchDashboardData(data.user.id)
+  const timeZone = await getTimeZone()
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,7 +44,9 @@ export default async function DashboardPage() {
       <main className="w-full py-6 px-6 md:px-10 lg:px-16">
         <Suspense fallback={<AssignmentsLoading />}>
           {/* Pass server-fetched data for instant hydration */}
-          <AssignmentsList initialData={dashboardData.assignments} />
+          <TimeZoneProvider initialTimeZone={timeZone}>
+            <AssignmentsList initialData={dashboardData.assignments} />
+          </TimeZoneProvider>
         </Suspense>
       </main>
     </div>

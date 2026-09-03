@@ -8,19 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Calendar, CheckCircle2, Clock, MoreVertical, Pencil, Trash2 } from "lucide-react"
 import type { Assignment } from "@/lib/types"
-import { format, isPast, isToday, isTomorrow } from "date-fns"
+import { dueDateLabel, isAssignmentOverdue, parseDueDate } from "@/lib/dates"
+import { useTimeZone } from "@/components/timezone-provider"
 import { useSWRConfig } from "swr"
 import { useState } from "react"
-import { useMounted } from "@/hooks/use-mounted"
-
-// Matches format(date, "MMM d, yyyy") but pinned to UTC, so the server and the
-// first client render agree regardless of the visitor's timezone.
-const utcDateFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: "UTC",
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-})
 
 // Dynamically import the dialog - only loads when user clicks edit
 const EditAssignmentDialog = lazy(() => 
@@ -42,7 +33,7 @@ export function AssignmentCard({
 }: AssignmentCardProps) {
   const { mutate } = useSWRConfig()
   const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const mounted = useMounted()
+  const timeZone = useTimeZone()
 
   const priorityColors = {
     low: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
@@ -56,15 +47,8 @@ export function AssignmentCard({
     overdue: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300",
   }
 
-  const dueDate = new Date(assignment.due_date)
-  const isOverdue = isPast(dueDate) && assignment.status !== "completed"
-
-  const getDueDateLabel = () => {
-    if (!mounted) return utcDateFormat.format(dueDate)
-    if (isToday(dueDate)) return "Due today"
-    if (isTomorrow(dueDate)) return "Due tomorrow"
-    return format(dueDate, "MMM d, yyyy")
-  }
+  const dueDate = parseDueDate(assignment.due_date)
+  const isOverdue = isAssignmentOverdue(assignment)
 
   const handleComplete = async () => {
     if (isPreview) {
@@ -162,7 +146,7 @@ export function AssignmentCard({
           </div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Calendar className="h-3 w-3" />
-            {getDueDateLabel()}
+            {dueDateLabel(dueDate, timeZone)}
           </div>
         </div>
       </CardContent>

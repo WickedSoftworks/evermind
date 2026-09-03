@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BookOpen, CheckCircle2, Clock, AlertTriangle } from "lucide-react"
 import type { Assignment } from "@/lib/types"
-import { isPast } from "date-fns"
+import { isAssignmentOverdue, isAssignmentPending } from "@/lib/dates"
 
 interface StatsCardsProps {
   assignments: Assignment[]
@@ -10,8 +10,8 @@ interface StatsCardsProps {
 export function StatsCards({ assignments }: StatsCardsProps) {
   const total = assignments.length
   const completed = assignments.filter((a) => a.status === "completed").length
-  const pending = assignments.filter((a) => a.status === "pending" && !isPast(new Date(a.due_date))).length
-  const overdue = assignments.filter((a) => a.status !== "completed" && isPast(new Date(a.due_date))).length
+  const pending = assignments.filter((a) => isAssignmentPending(a)).length
+  const overdue = assignments.filter((a) => isAssignmentOverdue(a)).length
 
   const stats = [
     {

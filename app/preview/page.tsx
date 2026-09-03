@@ -1,11 +1,12 @@
+import { getTimeZone } from "@/lib/timezone-server"
 import { Header } from "@/components/header"
 import { PreviewAssignmentsList } from "@/components/preview-assignments-list"
+import { TimeZoneProvider } from "@/components/timezone-provider"
 import type { Assignment } from "@/lib/types"
 import { addDays, subDays } from "date-fns"
 
-// Without this the mock due dates below are frozen at build time, which drifts
-// further from "now" every day and breaks hydration.
-export const revalidate = 3600
+// Reading the visitor's timezone renders this page per request, which also keeps
+// the mock due dates below relative to "now" instead of freezing them at build time.
 
 function createMockAssignments(): Assignment[] {
   const now = new Date()
@@ -80,7 +81,7 @@ function createMockAssignments(): Assignment[] {
   ]
 }
 
-export default function PreviewPage() {
+export default async function PreviewPage() {
   const mockUser = {
     id: "preview-user",
     email: "student@example.com",
@@ -93,7 +94,9 @@ export default function PreviewPage() {
     <div className="min-h-screen bg-background">
       <Header user={mockUser} isPreview />
       <main className="w-full py-6 px-6 md:px-10 lg:px-16">
-        <PreviewAssignmentsList initialAssignments={createMockAssignments()} />
+        <TimeZoneProvider initialTimeZone={await getTimeZone()}>
+          <PreviewAssignmentsList initialAssignments={createMockAssignments()} />
+        </TimeZoneProvider>
       </main>
     </div>
   )

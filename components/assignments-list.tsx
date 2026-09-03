@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AssignmentCard } from "@/components/assignment-card"
 import { StatsCards } from "@/components/stats-cards"
 import type { Assignment } from "@/lib/types"
-import { isPast } from "date-fns"
+import { isAssignmentOverdue, isAssignmentPending } from "@/lib/dates"
 import useSWR from "swr"
 import { Loader2 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -70,9 +70,9 @@ export function AssignmentsList({ initialData }: AssignmentsListProps) {
   }
 
   const allAssignments = assignments || []
-  const pendingAssignments = allAssignments.filter((a) => a.status === "pending" && !isPast(new Date(a.due_date)))
+  const pendingAssignments = allAssignments.filter((a) => isAssignmentPending(a))
   const completedAssignments = allAssignments.filter((a) => a.status === "completed")
-  const overdueAssignments = allAssignments.filter((a) => a.status !== "completed" && isPast(new Date(a.due_date)))
+  const overdueAssignments = allAssignments.filter((a) => isAssignmentOverdue(a))
 
   return (
     <div className="flex flex-col gap-6">

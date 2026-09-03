@@ -4,10 +4,15 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useMounted } from "@/hooks/use-mounted"
+import { useTimeZone } from "@/components/timezone-provider"
 import type { Assignment } from "@/lib/types"
-import { format, startOfWeek, addDays, addWeeks, isSameDay, isToday } from "date-fns"
+import {
+  addCalendarDays,
+  formatDayKey,
+  parseDueDate,
+  startOfWeekKey,
+  zonedDayKey,
+} from "@/lib/dates"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface WeeklyViewProps {
@@ -16,15 +21,20 @@ interface WeeklyViewProps {
 
 export function WeeklyView({ assignments }: WeeklyViewProps) {
   const [weekOffset, setWeekOffset] = useState(0)
-  const mounted = useMounted()
+  const timeZone = useTimeZone()
 
-  const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-  const weekStart = addWeeks(currentWeekStart, weekOffset)
-  const weekEnd = addDays(weekStart, 6)
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  // Calendar-day keys rather than Date objects: which day an assignment lands on
+  // depends on the visitor's timezone, and week boundaries must not be nudged by
+  // a DST transition falling inside the week.
+  const todayKey = zonedDayKey(new Date(), timeZone)
+  const weekStartKey = addCalendarDays(startOfWeekKey(todayKey), weekOffset * 7)
+  const weekEndKey = addCalendarDays(weekStartKey, 6)
+  const weekDayKeys = Array.from({ length: 7 }, (_, i) => addCalendarDays(weekStartKey, i))
 
-  const getAssignmentsForDay = (date: Date) => {
-    return assignments.filter((a) => a.status !== "completed" && isSameDay(new Date(a.due_date), date))
+  const getAssignmentsForDay = (dayKey: string) => {
+    return assignments.filter(
+      (a) => a.status !== "completed" && zonedDayKey(parseDueDate(a.due_date), timeZone) === dayKey,
+    )
   }
 
   const priorityColors = {
@@ -37,7 +47,8 @@ export function WeeklyView({ assignments }: WeeklyViewProps) {
     if (weekOffset === 0) return "This Week"
     if (weekOffset === 1) return "Next Week"
     if (weekOffset === -1) return "Last Week"
-    return `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d")}`
+    const dayAndMonth: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }
+    return `${formatDayKey(weekStartKey, dayAndMonth)} - ${formatDayKey(weekEndKey, dayAndMonth)}`
   }
 
   return (
@@ -76,42 +87,40 @@ export function WeeklyView({ assignments }: WeeklyViewProps) {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-7 gap-2">
-          {/* Which days make up "this week" depends on the visitor's timezone,
-              so the grid can only be filled in after hydration. */}
-          {!mounted
-            ? [...Array(7)].map((_, i) => <Skeleton key={i} className="min-h-[100px] rounded-lg" />)
-            : weekDays.map((day) => {
-                const dayAssignments = getAssignmentsForDay(day)
-                const today = isToday(day)
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={`flex flex-col rounded-lg border p-2 min-h-[100px] ${
-                      today ? "border-primary bg-primary/5" : ""
-                    }`}
-                  >
-                    <div className="text-center mb-2">
-                      <p className="text-xs text-muted-foreground">{format(day, "EEE")}</p>
-                      <p className={`text-sm font-semibold ${today ? "text-primary" : ""}`}>{format(day, "d")}</p>
+          {weekDayKeys.map((dayKey) => {
+            const dayAssignments = getAssignmentsForDay(dayKey)
+            const today = dayKey === todayKey
+            return (
+              <div
+                key={dayKey}
+                className={`flex flex-col rounded-lg border p-2 min-h-[100px] ${
+                  today ? "border-primary bg-primary/5" : ""
+                }`}
+              >
+                <div className="text-center mb-2">
+                  <p className="text-xs text-muted-foreground">{formatDayKey(dayKey, { weekday: "short" })}</p>
+                  <p className={`text-sm font-semibold ${today ? "text-primary" : ""}`}>
+                    {formatDayKey(dayKey, { day: "numeric" })}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1 flex-1">
+                  {dayAssignments.slice(0, 2).map((assignment) => (
+                    <div key={assignment.id} className="flex items-center gap-1">
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${priorityColors[assignment.priority]}`}
+                      />
+                      <span className="text-xs truncate flex-1">{assignment.title}</span>
                     </div>
-                    <div className="flex flex-col gap-1 flex-1">
-                      {dayAssignments.slice(0, 2).map((assignment) => (
-                        <div key={assignment.id} className="flex items-center gap-1">
-                          <div
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${priorityColors[assignment.priority]}`}
-                          />
-                          <span className="text-xs truncate flex-1">{assignment.title}</span>
-                        </div>
-                      ))}
-                      {dayAssignments.length > 2 && (
-                        <Badge variant="secondary" className="text-xs w-fit px-1 py-0">
-                          +{dayAssignments.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+                  ))}
+                  {dayAssignments.length > 2 && (
+                    <Badge variant="secondary" className="text-xs w-fit px-1 py-0">
+                      +{dayAssignments.length - 2}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </CardContent>
     </Card>

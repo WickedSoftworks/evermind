@@ -22,6 +22,8 @@ import GoogleIcon from "@/components/icons/GoogleIcon"
 import { DeleteAccountDialog } from "@/components/delete-account-dialog"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 import type { Assignment, Priority } from "@/lib/types"
+import { formatDueDate, isValidDate, parseDueDate } from "@/lib/dates"
+import { useTimeZone } from "@/components/timezone-provider"
 
 interface SettingsContentProps {
   user: SupabaseUser
@@ -33,6 +35,71 @@ interface ParsedAssignment {
   description: string | null
   due_date: string
   priority: Priority
+}
+
+/** One item from a Canvas export, normalised across the shapes the various files use. */
+interface CanvasItem {
+  title?: string | null
+  subject?: string
+  description?: string | null
+  dueAt?: string | null
+  pointsPossible?: number
+  priority?: Priority
+}
+
+function canvasPriority(item: CanvasItem): Priority {
+  if (item.priority) return item.priority
+  const points = typeof item.pointsPossible === "number" ? item.pointsPossible : 0
+  return points >= 5 ? "high" : points >= 3 ? "medium" : "low"
+}
+
+/**
+ * Append a parsed item, keeping the full instant it is due.
+ *
+ * The due date used to be truncated to "YYYY-MM-DD" at each of the eight call
+ * sites this replaces, which discarded the time of day and — since a bare date
+ * is read back as UTC midnight — showed the assignment a day early for anyone
+ * west of Greenwich.
+ */
+function pushAssignment(target: ParsedAssignment[], item: CanvasItem) {
+  if (!item.title || !item.dueAt) return
+
+  const parsed = parseDueDate(item.dueAt)
+  if (!isValidDate(parsed)) return
+
+  const dueDate = parsed.toISOString()
+  if (target.some((a) => a.title === item.title && a.due_date === dueDate)) return
+
+  target.push({
+    title: item.title,
+    subject: item.subject || "Imported",
+    description: item.description || null,
+    due_date: dueDate,
+    priority: canvasPriority(item),
+  })
+}
+
+/** Canvas COURSE_DATA, from either a `.json` export or the `window.COURSE_DATA` of a `.js` file. */
+function collectCourseData(data: Record<string, any>, target: ParsedAssignment[]) {
+  const subject = data.title || "Imported"
+  const fromCourseItem = (item: Record<string, any>): CanvasItem => ({
+    title: item.title,
+    subject,
+    description: item.content,
+    dueAt: item.dueAt,
+    pointsPossible: item.pointsPossible,
+  })
+
+  for (const module of data.modules ?? []) {
+    for (const item of module.items ?? []) {
+      if (item.type === "Assignment" || item.type === "Quizzes::Quiz") {
+        pushAssignment(target, fromCourseItem(item))
+      }
+    }
+  }
+
+  for (const item of data.assignments ?? []) pushAssignment(target, fromCourseItem(item))
+  for (const item of data.quizzes ?? []) pushAssignment(target, fromCourseItem(item))
 }
 
 const PRESET_THEMES = [
@@ -62,7 +129,8 @@ export function SettingsContent({ user }: SettingsContentProps) {
   const [googleClassroomStatus, setGoogleClassroomStatus] = useState<"idle" | "loading" | "connected" | "error">("idle")
   const canvasFileInputRef = useRef<HTMLInputElement>(null)
   const { mutate } = useSWRConfig()
-  
+  const timeZone = useTimeZone()
+
   const [newTheme, setNewTheme] = useState<CustomTheme>({
     id: "",
     name: "",
@@ -164,194 +232,45 @@ export function SettingsContent({ user }: SettingsContentProps) {
       const assignments: ParsedAssignment[] = []
 
       if (file.name.endsWith(".json")) {
-        // Parse Canvas JSON export or similar
         const data = JSON.parse(text)
-        const courseName = data.title || "Imported"
-        
-        // Handle Canvas COURSE_DATA format (from course-data.js converted to .json)
+
         if (data.modules || data.assignments) {
-          // Extract from modules
-          if (data.modules) {
-            for (const module of data.modules) {
-              if (module.items) {
-                for (const item of module.items) {
-                  if (item.dueAt && (item.type === "Assignment" || item.type === "Quizzes::Quiz")) {
-                    const parsedDate = new Date(item.dueAt)
-                    if (!isNaN(parsedDate.getTime())) {
-                      assignments.push({
-                        title: item.title,
-                        subject: courseName,
-                        description: item.content || null,
-                        due_date: parsedDate.toISOString().split("T")[0],
-                        priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
-                      })
-                    }
-                  }
-                }
-              }
-            }
-          }
-          
-          // Also check top-level assignments array
-          if (data.assignments) {
-            for (const item of data.assignments) {
-              if (item.dueAt) {
-                const parsedDate = new Date(item.dueAt)
-                if (!isNaN(parsedDate.getTime())) {
-                  // Check if we already have this assignment (avoid duplicates)
-                  const exists = assignments.some(a => a.title === item.title && a.due_date === parsedDate.toISOString().split("T")[0])
-                  if (!exists) {
-                    assignments.push({
-                      title: item.title,
-                      subject: courseName,
-                      description: item.content || null,
-                      due_date: parsedDate.toISOString().split("T")[0],
-                      priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
-                    })
-                  }
-                }
-              }
-            }
-          }
-          
-          // Also check quizzes
-          if (data.quizzes) {
-            for (const item of data.quizzes) {
-              if (item.dueAt) {
-                const parsedDate = new Date(item.dueAt)
-                if (!isNaN(parsedDate.getTime())) {
-                  const exists = assignments.some(a => a.title === item.title && a.due_date === parsedDate.toISOString().split("T")[0])
-                  if (!exists) {
-                    assignments.push({
-                      title: item.title,
-                      subject: courseName,
-                      description: item.content || null,
-                      due_date: parsedDate.toISOString().split("T")[0],
-                      priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
-                    })
-                  }
-                }
-              }
-            }
-          }
+          // Canvas COURSE_DATA format (from course-data.js converted to .json)
+          collectCourseData(data, assignments)
         } else {
           // Fallback for simpler JSON formats
           const items = Array.isArray(data) ? data : data.items || []
           for (const item of items) {
-            const title = item.title || item.name || item.assignment_name
-            const dueDate = item.due_date || item.due_at || item.dueAt
-            
-            if (title && dueDate) {
-              const parsedDate = new Date(dueDate)
-              if (!isNaN(parsedDate.getTime())) {
-                assignments.push({
-                  title,
-                  subject: item.course_name || item.subject || item.course || "Imported",
-                  description: item.description || null,
-                  due_date: parsedDate.toISOString().split("T")[0],
-                  priority: "medium",
-                })
-              }
-            }
+            pushAssignment(assignments, {
+              title: item.title || item.name || item.assignment_name,
+              subject: item.course_name || item.subject || item.course,
+              description: item.description,
+              dueAt: item.due_date || item.due_at || item.dueAt,
+              priority: "medium",
+            })
           }
         }
       } else if (file.name.endsWith(".js")) {
         // Parse Canvas course-data.js format (window.COURSE_DATA = {...})
         const jsonMatch = text.match(/window\.COURSE_DATA\s*=\s*(\{[\s\S]*\})/)
-        if (jsonMatch) {
-          const data = JSON.parse(jsonMatch[1])
-          const courseName = data.title || "Imported"
-          
-          // Extract from modules
-          if (data.modules) {
-            for (const module of data.modules) {
-              if (module.items) {
-                for (const item of module.items) {
-                  if (item.dueAt && (item.type === "Assignment" || item.type === "Quizzes::Quiz")) {
-                    const parsedDate = new Date(item.dueAt)
-                    if (!isNaN(parsedDate.getTime())) {
-                      assignments.push({
-                        title: item.title,
-                        subject: courseName,
-                        description: item.content || null,
-                        due_date: parsedDate.toISOString().split("T")[0],
-                        priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
-                      })
-                    }
-                  }
-                }
-              }
-            }
-          }
-          
-          // Also check top-level assignments array
-          if (data.assignments) {
-            for (const item of data.assignments) {
-              if (item.dueAt) {
-                const parsedDate = new Date(item.dueAt)
-                if (!isNaN(parsedDate.getTime())) {
-                  const exists = assignments.some(a => a.title === item.title && a.due_date === parsedDate.toISOString().split("T")[0])
-                  if (!exists) {
-                    assignments.push({
-                      title: item.title,
-                      subject: courseName,
-                      description: item.content || null,
-                      due_date: parsedDate.toISOString().split("T")[0],
-                      priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
-                    })
-                  }
-                }
-              }
-            }
-          }
-          
-          // Also check quizzes
-          if (data.quizzes) {
-            for (const item of data.quizzes) {
-              if (item.dueAt) {
-                const parsedDate = new Date(item.dueAt)
-                if (!isNaN(parsedDate.getTime())) {
-                  const exists = assignments.some(a => a.title === item.title && a.due_date === parsedDate.toISOString().split("T")[0])
-                  if (!exists) {
-                    assignments.push({
-                      title: item.title,
-                      subject: courseName,
-                      description: item.content || null,
-                      due_date: parsedDate.toISOString().split("T")[0],
-                      priority: item.pointsPossible >= 5 ? "high" : item.pointsPossible >= 3 ? "medium" : "low",
-                    })
-                  }
-                }
-              }
-            }
-          }
-        } else {
+        if (!jsonMatch) {
           throw new Error("Could not find COURSE_DATA in JavaScript file")
         }
+        collectCourseData(JSON.parse(jsonMatch[1]), assignments)
       } else if (file.name.endsWith(".xml") || file.name.endsWith(".imscc")) {
         // Parse IMS Common Cartridge (Canvas export format)
         const parser = new DOMParser()
         const doc = parser.parseFromString(text, "text/xml")
-        
+
         // Look for assignment items in various formats
         const items = doc.querySelectorAll("item, assignment, resource")
         items.forEach((item) => {
-          const title = item.querySelector("title")?.textContent || item.getAttribute("title")
-          const dueDate = item.querySelector("due_at, due_date, date")?.textContent
-          const description = item.querySelector("description, text")?.textContent
-
-          if (title && dueDate) {
-            const parsedDate = new Date(dueDate)
-            if (!isNaN(parsedDate.getTime())) {
-              assignments.push({
-                title,
-                subject: "Imported",
-                description: description || null,
-                due_date: parsedDate.toISOString().split("T")[0],
-                priority: "medium",
-              })
-            }
-          }
+          pushAssignment(assignments, {
+            title: item.querySelector("title")?.textContent || item.getAttribute("title"),
+            description: item.querySelector("description, text")?.textContent,
+            dueAt: item.querySelector("due_at, due_date, date")?.textContent,
+            priority: "medium",
+          })
         })
       }
 
@@ -387,7 +306,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const futureIndices = parsedAssignments
-      .map((a, idx) => ({ idx, date: new Date(a.due_date) }))
+      .map((a, idx) => ({ idx, date: parseDueDate(a.due_date) }))
       .filter(({ date }) => date >= today)
       .map(({ idx }) => idx)
     setSelectedAssignments(new Set(futureIndices))
@@ -419,7 +338,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
         title: a.title,
         subject: a.subject,
         description: a.description,
-        due_date: new Date(a.due_date).toISOString(),
+        due_date: a.due_date,
         priority: a.priority,
         status: "pending" as const,
       }))
@@ -669,7 +588,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                         </div>
                         <div className="flex-1 overflow-y-auto border rounded-lg divide-y min-h-0">
                           {parsedAssignments.map((assignment, idx) => {
-                            const isPast = new Date(assignment.due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                            const isPast = parseDueDate(assignment.due_date) < new Date(new Date().setHours(0, 0, 0, 0))
                             return (
                               <label
                                 key={idx}
@@ -683,7 +602,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium text-sm truncate">{assignment.title}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    {assignment.subject} • Due: {new Date(assignment.due_date).toLocaleDateString()}
+                                    {assignment.subject} • Due: {formatDueDate(parseDueDate(assignment.due_date), timeZone)}
                                     {isPast && " (Past)"}
                                   </p>
                                 </div>
@@ -716,7 +635,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                       <div key={idx} className="p-3 text-sm">
                         <p className="font-medium">{assignment.title}</p>
                         <p className="text-muted-foreground">
-                          {assignment.subject} • Due: {new Date(assignment.due_date).toLocaleDateString()}
+                          {assignment.subject} • Due: {formatDueDate(parseDueDate(assignment.due_date), timeZone)}
                         </p>
                       </div>
                     ))}

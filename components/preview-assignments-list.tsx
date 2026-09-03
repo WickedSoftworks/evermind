@@ -7,7 +7,7 @@ import { StatsCards } from "@/components/stats-cards"
 import { WeeklyView } from "@/components/weekly-view"
 import { PreviewAddAssignmentDialog } from "@/components/preview-add-assignment-dialog"
 import type { Assignment } from "@/lib/types"
-import { isPast } from "date-fns"
+import { isAssignmentOverdue, isAssignmentPending } from "@/lib/dates"
 
 export function PreviewAssignmentsList({ initialAssignments }: { initialAssignments: Assignment[] }) {
   const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments)
@@ -25,9 +25,9 @@ export function PreviewAssignmentsList({ initialAssignments }: { initialAssignme
   }
 
   const allAssignments = assignments
-  const pendingAssignments = allAssignments.filter((a) => a.status === "pending" && !isPast(new Date(a.due_date)))
+  const pendingAssignments = allAssignments.filter((a) => isAssignmentPending(a))
   const completedAssignments = allAssignments.filter((a) => a.status === "completed")
-  const overdueAssignments = allAssignments.filter((a) => a.status !== "completed" && isPast(new Date(a.due_date)))
+  const overdueAssignments = allAssignments.filter((a) => isAssignmentOverdue(a))
 
   return (
     <div className="flex flex-col gap-6">
