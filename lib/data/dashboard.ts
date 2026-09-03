@@ -24,26 +24,3 @@ export async function fetchDashboardData(userId: string): Promise<DashboardData>
     assignments: assignmentsResult.data || [],
   };
 }
-
-/**
- * Fetches user authentication and dashboard data in parallel
- */
-export async function fetchUserAndDashboardData() {
-  const supabase = await createClient();
-
-  // First get the user (required before we can fetch their data)
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-
-  if (userError || !userData?.user) {
-    return { user: null, dashboardData: null, error: userError };
-  }
-
-  // Now fetch dashboard data
-  const dashboardData = await fetchDashboardData(userData.user.id);
-
-  return {
-    user: userData.user,
-    dashboardData,
-    error: null,
-  };
-}
