@@ -59,7 +59,11 @@ export default function PrivacyPage() {
             you.
             <br></br>
             <br></br>
-            You could also request exportation / deletion of your data at any time by contacting us at{" "}
+            You can export or delete your data yourself at any time from your{" "}
+            <Link href="/settings" className="underline decoration-solid hover:opacity-70 transition-opacity">
+              settings page
+            </Link>
+            . For anything else, contact us at{" "}
             <button
               type="button"
               onClick={handleCopyEmail}

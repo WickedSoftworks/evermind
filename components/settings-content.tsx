@@ -19,6 +19,7 @@ import { useSWRConfig } from "swr";
 import { type CustomTheme, DEFAULT_CUSTOM_THEMES, useColorTheme } from "@/components/color-theme-provider";
 import { useCompactMode } from "@/components/compact-mode-provider";
 import { DeleteAccountDialog } from "@/components/delete-account-dialog";
+import { ExportDataButton } from "@/components/export-data-button";
 import GoogleIcon from "@/components/icons/GoogleIcon";
 import { useTheme } from "@/components/theme-provider";
 import { useTimeZone } from "@/components/timezone-provider";
@@ -478,6 +479,19 @@ export function SettingsContent({ user }: SettingsContentProps) {
                 <p className="text-sm font-medium capitalize">{user.app_metadata?.provider || "Email"}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Data</CardTitle>
+            <CardDescription>
+              Download everything Evermind stores about you — your account details and every assignment — as a single
+              JSON file.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ExportDataButton />
           </CardContent>
         </Card>
 
