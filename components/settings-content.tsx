@@ -281,8 +281,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
           throw new Error("Could not find COURSE_DATA in JavaScript file");
         }
         collectCourseData(JSON.parse(jsonMatch[1]), assignments);
-      } else if (file.name.endsWith(".xml") || file.name.endsWith(".imscc")) {
-        // Parse IMS Common Cartridge (Canvas export format)
+      } else if (file.name.endsWith(".xml")) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(text, "text/xml");
 

@@ -15,7 +15,6 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Evermind - Assignment Tracker",
   description: "Never miss a deadline again. Track your assignments and stay on top of your coursework.",
-  generator: "v0.app",
   icons: {
     icon: [
       {
