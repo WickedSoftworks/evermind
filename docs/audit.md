@@ -43,38 +43,6 @@ worst failure mode a deadline tracker can have.
 
 Severity is judged by impact on a self-hosted deployment with real users.
 
-#### C2 — The UPDATE row-level security policy has no `WITH CHECK`
-
-`scripts/001_create_assignments_table.sql:27-29`
-
-```sql
-CREATE POLICY "Users can update their own assignments"
-  ON assignments FOR UPDATE
-  USING (auth.uid() = user_id);
-```
-
-`USING` decides which rows a user may *target*. `WITH CHECK` decides what the row may look like *after* the
-write, and Postgres does not infer one from the other. Without it, an authenticated user can issue
-
-```js
-supabase.from("assignments").update({ user_id: "<someone-else's-uuid>" }).eq("id", myRowId)
-```
-
-and push a row into another account, where the owner cannot delete it and did not create it. It is a
-write-into-another-tenant primitive — limited in blast radius here, but it is a genuine break of the
-isolation the schema claims to provide.
-
-**Fix:**
-
-```sql
-CREATE POLICY "Users can update their own assignments"
-  ON assignments FOR UPDATE
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
-```
-
-Consider also revoking UPDATE on the `user_id` column outright — nothing in the app ever changes it.
-
 ### 2.2 High
 
 #### H2 — Every database write discards its error
@@ -102,17 +70,6 @@ keep the dialog open on failure. Better still, lift the six inline mutations int
 `lib/data/assignments.ts` that throws, and let one `useAssignmentMutation` hook own the error and revalidation
 handling.
 
-#### H4 — `.imscc` import cannot work as written
-
-`components/settings-content.tsx:376-401`, and advertised in `README.md`
-
-`.imscc` is an IMS Common Cartridge: a **ZIP archive**. The handler calls `file.text()` and feeds the result
-to `DOMParser`, which will parse binary ZIP bytes as XML, produce a parser-error document, match nothing, and
-report "No assignments found in file." The README lists Common Cartridge as a supported import format.
-
-**Fix:** either unzip in the browser (`fflate`, ~10 KB) and parse `imsmanifest.xml` plus the per-resource
-XML inside, or remove `.imscc` from the accept list and the README until it is implemented.
-
 ### 2.3 Medium
 
 #### M1 — Due dates can display one day off
@@ -127,18 +84,6 @@ Greenwich, and the original time of day is discarded entirely.
 
 **Fix:** store the user's IANA timezone (once, in a `profiles` row or `user_metadata`) and format server-side
 against it, which removes both the mismatch and the flash. At minimum, stop truncating imported timestamps.
-
-#### M2 — The `overdue` status is dead, and the derivation is duplicated four times
-
-The schema (`scripts/001_create_assignments_table.sql:9`) and `lib/types.ts:2` both admit `'overdue'`, but
-nothing ever writes it — overdue is computed on the fly as `status !== "completed" && isPast(due_date)` in
-`assignments-list.tsx:76-78`, `preview-assignments-list.tsx:28-30`, `stats-cards.tsx:12-14` and
-`assignment-card.tsx:63`. Four copies of one rule, plus a database column whose declared domain does not
-match its actual contents.
-
-**Fix:** drop `'overdue'` from the type and the CHECK constraint (`status` becomes `pending | completed`),
-and put the derivation in one exported helper — `isOverdue(a)` and a single `partitionAssignments(list)` used
-by both the real and preview lists.
 
 #### M3 — `updated_at` is maintained by the client, inconsistently
 
@@ -166,16 +111,6 @@ can never be edited either — they are state that exists solely to be ignored.
 **Fix:** apply the full set of variables, and derive the dark-mode variants (or store a light and dark pair
 per theme). If the intent really is accent-only theming, reduce `CustomTheme` to `{ id, name, primary }` and
 delete the rest.
-
-#### M6 — The FOUC script knows about only five of the eight built-in themes
-
-`components/color-theme-provider.tsx:210-216` inlines a hardcoded copy of the theme list into the `<head>`
-script, and it lists `ocean`, `forest`, `sunset`, `lavender` and `plasma` — but not `nightswim`, `mint` or
-`candy`, which were added later. Users on those three get exactly the flash of unthemed colour the script
-exists to prevent.
-
-**Fix:** generate the inline script from `DEFAULT_CUSTOM_THEMES` (`JSON.stringify` the ids and primaries into
-the template literal) so the two can never drift again.
 
 #### M7 — Unguarded `JSON.parse` of localStorage
 
