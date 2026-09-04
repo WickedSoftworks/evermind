@@ -29,6 +29,39 @@ const nextConfig = {
     // down an error, you can uncomment it if you want
     // removeConsole: process.env.NODE_ENV === "production",
   },
+  headers() {
+    return [
+      {
+        source: '/',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: 'Content Security Policy'
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'Strict Transport Security'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'Frame Options'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'Content Type Options'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'Refferrer Policy'
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'Permissions Policy'
+          }
+        ]
+      }
+    ]
+  }
 };
 
 export default nextConfig;
