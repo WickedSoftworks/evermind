@@ -4,7 +4,6 @@ import { format } from "date-fns";
 import { CalendarIcon, Plus } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { useSWRConfig } from "swr";
 import { ClassCombobox } from "@/components/class-combobox";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -22,16 +21,16 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAssignmentMutation } from "@/hooks/use-assignment-mutation";
 import { useSubjectOptions } from "@/hooks/use-classes";
-import { createClient } from "@/lib/supabase/client";
+import { createAssignment } from "@/lib/data/assignments";
 import type { Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function AddAssignmentDialog() {
-  const { mutate } = useSWRConfig();
   const subjectOptions = useSubjectOptions();
+  const { runMutation, isPending } = useAssignmentMutation();
   const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -57,37 +56,29 @@ export function AddAssignmentDialog() {
       return;
     }
 
-    setIsLoading(true);
-
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-
     // Combine date and time
     const [hours, minutes] = dueTime.split(":");
     const combinedDateTime = new Date(dueDate);
     combinedDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
-    await supabase.from("assignments").insert({
-      user_id: user.id,
-      title,
-      subject,
-      description: description || null,
-      due_date: combinedDateTime.toISOString(),
-      priority,
-      status: "pending",
-    });
+    const saved = await runMutation(
+      () =>
+        createAssignment({
+          title,
+          subject,
+          description: description || null,
+          due_date: combinedDateTime.toISOString(),
+          priority,
+        }),
+      "Could not add this assignment",
+    );
 
-    mutate("assignments");
+    // Closing regardless is what made a rejected write look like a saved one. Leave
+    // the form up with the user's input still in it so they can retry.
+    if (!saved) return;
+
     resetForm();
     setOpen(false);
-    setIsLoading(false);
   };
 
   return (
@@ -173,8 +164,8 @@ export function AddAssignmentDialog() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Adding..." : "Add Assignment"}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Adding..." : "Add Assignment"}
             </Button>
           </DialogFooter>
         </form>

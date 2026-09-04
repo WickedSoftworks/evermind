@@ -43,47 +43,7 @@ worst failure mode a deadline tracker can have.
 
 Severity is judged by impact on a self-hosted deployment with real users.
 
-### 2.2 High
-
-#### H2 — Every database write discards its error
-
-`components/assignment-card.tsx:76-104`, `components/add-assignment-dialog.tsx:73-82`,
-`components/edit-assignment-dialog.tsx:71-83`
-
-```ts
-await supabase.from("assignments").delete().eq("id", assignment.id)
-mutate("assignments")
-```
-
-Supabase's client does not throw on failure; it returns `{ error }`. Nothing here reads it. If a write is
-rejected — offline, expired session, RLS denial, a constraint violation — the dialog closes, the toast never
-fires, and the revalidation quietly restores the old row. The user believes their assignment was saved,
-edited, or deleted when it was not. For an app whose entire promise is "never miss a deadline", this is the
-most damaging class of bug present.
-
-The one place that *does* check (`settings-content.tsx:463`, the Canvas import) proves the pattern is known;
-it just was not applied to the other five call sites. A `Toaster` is already mounted in the root layout and
-goes essentially unused.
-
-**Fix:** destructure `{ error }` at every call site, surface it with `toast({ variant: "destructive" })`, and
-keep the dialog open on failure. Better still, lift the six inline mutations into a small
-`lib/data/assignments.ts` that throws, and let one `useAssignmentMutation` hook own the error and revalidation
-handling.
-
 ### 2.3 Medium
-
-#### M1 — Due dates can display one day off
-
-`components/add-assignment-dialog.tsx:69-78` builds the timestamp with `setHours` in **local** time and
-serialises with `toISOString`, which is correct. But `assignment-card.tsx:14-19` formats the first render
-with a UTC-pinned formatter to avoid a hydration mismatch, so a user at UTC−5 with an assignment due at
-00:30 local sees the *next* day until hydration completes and the label swaps. The import path is worse:
-`due_date` is truncated to `toISOString().split("T")[0]` and later re-parsed by `new Date("2026-03-04")`,
-which JavaScript reads as UTC midnight — so every imported assignment renders a day early for anyone west of
-Greenwich, and the original time of day is discarded entirely.
-
-**Fix:** store the user's IANA timezone (once, in a `profiles` row or `user_metadata`) and format server-side
-against it, which removes both the mismatch and the flash. At minimum, stop truncating imported timestamps.
 
 #### M3 — `updated_at` is maintained by the client, inconsistently
 
@@ -92,80 +52,6 @@ not by the Canvas import, and never by anything that writes outside the UI. A cl
 timestamp is also trivially falsifiable.
 
 **Fix:** the standard `moddatetime` trigger, and remove `updated_at` from every client payload.
-
-#### M4 — Referenced favicons do not exist
-
-`app/layout.tsx:20-32` declares `/icon-light-32x32.png`, `/icon-dark-32x32.png`, `/icon.svg` and
-`/apple-icon.png`. `public/` contains only `placeholder-user.jpg`, `placeholder.jpg` and `placeholder.svg`.
-Every page load fetches four 404s. *(unverified at runtime — but the files are plainly absent.)*
-
-#### M5 — Theme colours are 80 % decorative
-
-`components/color-theme-provider.tsx:120-130` applies only `--primary` and `--ring`. Every theme also
-declares `background`, `foreground`, `card` and `accent`, and none of them are ever set on the document. The
-consequence is visible: "Plasma" and "Night Swim" describe dark palettes (`background: "#1a1a1a"`) but
-selecting them changes nothing except the accent colour. The custom-theme editor
-(`settings-content.tsx:919`) exposes only a primary-colour input, so the other four fields of `CustomTheme`
-can never be edited either — they are state that exists solely to be ignored.
-
-**Fix:** apply the full set of variables, and derive the dark-mode variants (or store a light and dark pair
-per theme). If the intent really is accent-only theming, reduce `CustomTheme` to `{ id, name, primary }` and
-delete the rest.
-
-#### M7 — Unguarded `JSON.parse` of localStorage
-
-`components/color-theme-provider.tsx:143`, and the same pattern in the inline script (which *is* guarded).
-A malformed `evermind-custom-themes` value throws inside the mount effect, so `setMounted(true)` never runs
-and the provider permanently renders its children with no context — silently, because `useColorTheme`
-(`:184-192`) returns defaults instead of throwing when the context is missing.
-
-**Fix:** wrap the parse in `try/catch` and fall back to the defaults; validate the parsed shape before use.
-
-#### M8 — Providers that swallow their own absence
-
-`compact-mode-provider.tsx:38-40` and `color-theme-provider.tsx:172-174` both render `<>{children}</>` before
-mount, and both hooks return silent defaults when the context is missing. Together this means a real
-mis-wiring — a consumer rendered outside its provider — is indistinguishable from normal operation. It also
-guarantees that the first client render of every consumer sees `isCompact: false` regardless of the stored
-preference; the inline head script papers over this for CSS, but any component that branches on `isCompact`
-in JS will be wrong on the first pass.
-
-**Fix:** initialise state from `localStorage` in a lazy `useState` initialiser, always render the provider,
-and let the hooks throw when the context is genuinely absent.
-
-#### M9 — No security headers
-
-There is no `headers()` block in `next.config.mjs`. Missing: `Content-Security-Policy`,
-`Strict-Transport-Security`, `X-Frame-Options`/`frame-ancestors`, `X-Content-Type-Options`,
-`Referrer-Policy`, `Permissions-Policy`. The app is framable, which matters because it holds a live session.
-
-#### M10 — No rate limiting, and no explicit origin check on account deletion
-
-`app/api/account/delete/route.ts` is a `POST` with no body, guarded only by the session cookie. Supabase's
-auth cookies default to `SameSite=Lax`, which does block a cross-site form POST, so this is not currently
-exploitable — but the safety comes entirely from a default the app does not set or assert. An explicit
-`Origin`/`Sec-Fetch-Site` check costs three lines and removes the dependency on that default. Separately,
-nothing anywhere is rate limited: sign-in attempts, imports, and writes are all unthrottled.
-
-### 2.4 Low
-
-- **L5 — Deleting an assignment has no confirmation.** `assignment-card.tsx:139-142` deletes on a single
-  dropdown click, irreversibly, with no undo. Deleting an *account* is guarded by typing your email address;
-  deleting a week's work is not guarded at all.
-- **L9 — The privacy policy over-promises.** It offers data export ("request exportation of your data"),
-  which the app cannot do, and gives a contact address at `evermind.today` while the deployment lives at
-  `evermind.shxrk.dev`.
-- **L10 — No error boundaries.** There is no `error.tsx`, `global-error.tsx` or `not-found.tsx` anywhere in
-  `app/`. A thrown render error shows the default Next.js error screen.
-- **L13 — No `router.refresh()` after mutation.** SWR updates the client cache, but the server-rendered
-  `initialData` for `/dashboard` is not invalidated, so a back-navigation into the App Router cache can show
-  a stale list.
-- **L14 — No tests and no CI.** No test runner, no test files, no `.github/workflows`.
-- **L15 — Service-role key documented without warning.** `.example.env` lists `SUPABASE_SERVICE_ROLE_KEY`
-  beside two `NEXT_PUBLIC_` values with no comment that it bypasses RLS entirely and must never be exposed to
-  the browser. `.example.env` also carries `GOOGLE_CALLBACK_URL` and `SESSION_SECRET`, which nothing in the
-  codebase reads — leftovers that invite a self-hoster to configure the wrong thing.
-
 ---
 
 ## 3. Missing features
@@ -180,8 +66,6 @@ Things a user would reasonably expect a deadline tracker to have, which it does 
 - **Google Classroom import.** Presented in Settings as a first-class integration with a Connect button and a
   connection status; `handleGoogleClassroomConnect` (`settings-content.tsx:486-495`) waits a second and pops
   an `alert()` saying it is not implemented.
-- **Data export.** Promised in the privacy policy and by the "right to access" language on that page; not
-  implemented. The account-deletion route shows the pattern to follow.
 - **Search and filtering.** Beyond the four status tabs there is nothing: no text search, no filter by
   subject or priority, no sort control. The list is fixed at due-date ascending.
 - **Recurring assignments.** Weekly problem sets and readings are the most common thing a student tracks, and
@@ -194,7 +78,6 @@ Things a user would reasonably expect a deadline tracker to have, which it does 
 - **A test suite.** The Canvas parser alone — four formats, date coercion, deduplication, priority
   inference — is pure, self-contained logic and would be straightforward to cover; it is also where the
   worst bugs are.
-- **CI.** A workflow running install, type-check, lint, and tests on pull requests.
 - **A second migration file, and a migration convention.** `scripts/001_...sql` uses `IF NOT EXISTS` for the
   table and index but bare `CREATE POLICY` for the policies, so re-running it errors. There is no way to
   express a schema change today except editing file 001 in place, which existing deployments will never pick

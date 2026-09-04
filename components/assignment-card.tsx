@@ -22,8 +22,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAssignmentMutation } from "@/hooks/use-assignment-mutation";
+import { AssignmentWriteError, deleteAssignment, setAssignmentStatus } from "@/lib/data/assignments";
 import { dueDateLabel, isAssignmentOverdue, parseDueDate } from "@/lib/dates";
-import { createClient } from "@/lib/supabase/client";
 import type { Assignment } from "@/lib/types";
 
 // Dynamically import the dialog - only loads when user clicks edit
@@ -45,6 +46,7 @@ export function AssignmentCard({
   onPreviewDelete,
 }: AssignmentCardProps) {
   const { mutate } = useSWRConfig();
+  const { runMutation } = useAssignmentMutation();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -71,12 +73,7 @@ export function AssignmentCard({
       onPreviewStatusChange?.(assignment.id, "completed");
       return;
     }
-    const supabase = createClient();
-    await supabase
-      .from("assignments")
-      .update({ status: "completed", updated_at: new Date().toISOString() })
-      .eq("id", assignment.id);
-    mutate("assignments");
+    await runMutation(() => setAssignmentStatus(assignment.id, "completed"), "Could not mark this complete");
   };
 
   const handleDelete = async () => {
@@ -89,17 +86,18 @@ export function AssignmentCard({
     setIsDeleting(true);
     setDeleteError(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.from("assignments").delete().eq("id", assignment.id);
-
-    setIsDeleting(false);
-
-    if (error) {
+    try {
+      await deleteAssignment(assignment.id);
+    } catch (error) {
       // Deleting used to be fire-and-forget, so a failure just left the card
-      // sitting there. Keep the dialog open and say what happened.
-      console.error("Could not delete assignment:", error);
-      setDeleteError("Could not delete this assignment. Please try again.");
+      // sitting there. The message goes inline rather than into a toast because
+      // the dialog it belongs to is still open in front of it.
+      setDeleteError(
+        error instanceof AssignmentWriteError ? error.message : "Could not delete this assignment. Please try again.",
+      );
       return;
+    } finally {
+      setIsDeleting(false);
     }
 
     setDeleteDialogOpen(false);
@@ -117,12 +115,7 @@ export function AssignmentCard({
       onPreviewStatusChange?.(assignment.id, "pending");
       return;
     }
-    const supabase = createClient();
-    await supabase
-      .from("assignments")
-      .update({ status: "pending", updated_at: new Date().toISOString() })
-      .eq("id", assignment.id);
-    mutate("assignments");
+    await runMutation(() => setAssignmentStatus(assignment.id, "pending"), "Could not reopen this assignment");
   };
 
   return (

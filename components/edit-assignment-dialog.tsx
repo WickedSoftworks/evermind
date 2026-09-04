@@ -4,7 +4,6 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { useSWRConfig } from "swr";
 import { ClassCombobox } from "@/components/class-combobox";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -21,8 +20,9 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAssignmentMutation } from "@/hooks/use-assignment-mutation";
 import { useSubjectOptions } from "@/hooks/use-classes";
-import { createClient } from "@/lib/supabase/client";
+import { updateAssignment } from "@/lib/data/assignments";
 import type { Assignment, Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -33,9 +33,8 @@ interface EditAssignmentDialogProps {
 }
 
 export function EditAssignmentDialog({ assignment, open, onOpenChange }: EditAssignmentDialogProps) {
-  const { mutate } = useSWRConfig();
   const subjectOptions = useSubjectOptions();
-  const [isLoading, setIsLoading] = useState(false);
+  const { runMutation, isPending } = useAssignmentMutation();
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -66,30 +65,28 @@ export function EditAssignmentDialog({ assignment, open, onOpenChange }: EditAss
       return;
     }
 
-    setIsLoading(true);
-
-    const supabase = createClient();
-
     // Combine date and time
     const [hours, minutes] = dueTime.split(":");
     const combinedDateTime = new Date(dueDate);
     combinedDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
-    await supabase
-      .from("assignments")
-      .update({
-        title,
-        subject,
-        description: description || null,
-        due_date: combinedDateTime.toISOString(),
-        priority,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", assignment.id);
+    const saved = await runMutation(
+      () =>
+        updateAssignment(assignment.id, {
+          title,
+          subject,
+          description: description || null,
+          due_date: combinedDateTime.toISOString(),
+          priority,
+        }),
+      "Could not save your changes",
+    );
 
-    mutate("assignments");
+    // Stay open on failure: the edits are only in this form, and closing would
+    // discard them while the list quietly revalidated back to the old row.
+    if (!saved) return;
+
     onOpenChange(false);
-    setIsLoading(false);
   };
 
   return (
@@ -169,8 +166,8 @@ export function EditAssignmentDialog({ assignment, open, onOpenChange }: EditAss
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Updating..." : "Update Assignment"}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Updating..." : "Update Assignment"}
             </Button>
           </DialogFooter>
         </form>

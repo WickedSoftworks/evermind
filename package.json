@@ -1,6 +1,6 @@
 {
   "name": "evermind",
-  "version": "2.9.0",
+  "version": "2.14.5",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -10,6 +10,7 @@
     "format": "biome format --write",
     "check": "biome check",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
     "start": "next start"
   },
   "dependencies": {
@@ -69,6 +70,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
     "@tailwindcss/postcss": "^4.1.9",
+    "@types/bun": "^1.4.1",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
