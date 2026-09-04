@@ -86,7 +86,9 @@ The remaining entries in `.example.env` are for the OAuth providers you choose t
 
 ### 3. Set up the database
 
-Run [`scripts/001_create_assignments_table.sql`](scripts/001_create_assignments_table.sql) in the Supabase SQL editor. It creates the `assignments` table, its indexes, and the Row Level Security policies that scope every row to its owner.
+Run [`scripts/001_create_assignments_table.sql`](scripts/001_create_assignments_table.sql) in the Supabase SQL editor, then [`scripts/002_create_classes_table.sql`](scripts/002_create_classes_table.sql). Together they create the `assignments` and `classes` tables, their indexes, and the Row Level Security policies that scope every row to its owner.
+
+Upgrading a database created at 2.9.0 or earlier? Run [`scripts/003_migrate_2_9_0_to_2_14_5.sql`](scripts/003_migrate_2_9_0_to_2_14_5.sql) instead — see [self-hosting](docs/self-hosting.md#33-create-the-schema).
 
 ### 4. Configure sign-in
 

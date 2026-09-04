@@ -17,17 +17,17 @@ ALTER TABLE assignments ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies: Users can only access their own assignments
 CREATE POLICY "Users can view their own assignments"
-  ON assignments FOR SELECT 
+  ON assignments FOR SELECT
   USING (auth.uid() = user_id);
-  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert their own assignments" 
   ON assignments FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update their own assignments" 
-  ON assignments FOR UPDATE 
-  USING (auth.uid() = user_id);
+  ON assignments FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete their own assignments" 
   ON assignments FOR DELETE 

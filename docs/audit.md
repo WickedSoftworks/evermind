@@ -75,9 +75,6 @@ Things a user would reasonably expect a deadline tracker to have, which it does 
 
 ### 3.2 Infrastructure the project has grown into needing
 
-- **A test suite.** The Canvas parser alone — four formats, date coercion, deduplication, priority
-  inference — is pure, self-contained logic and would be straightforward to cover; it is also where the
-  worst bugs are.
 - **A second migration file, and a migration convention.** `scripts/001_...sql` uses `IF NOT EXISTS` for the
   table and index but bare `CREATE POLICY` for the policies, so re-running it errors. There is no way to
   express a schema change today except editing file 001 in place, which existing deployments will never pick

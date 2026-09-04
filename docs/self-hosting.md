@@ -147,19 +147,11 @@ Create a project at [supabase.com](https://supabase.com). From **Project Setting
 Open the Supabase **SQL Editor** and run `scripts/001_create_assignments_table.sql`. It creates the
 `assignments` table, three indexes, enables RLS, and adds four policies.
 
-**Apply this correction while you are there.** The generated UPDATE policy is missing its `WITH CHECK` clause,
-which lets a user reassign one of their rows to another account (audit **C2**):
+The UPDATE policy carries its `WITH CHECK` clause as of 2.14.5 (audit **C2**), so there is no longer a
+correction to apply by hand here. If you created your database before then, see **Upgrading an existing
+database** below — the clause is missing and a user can reassign one of their rows to another account.
 
-```sql
-DROP POLICY "Users can update their own assignments" ON assignments;
-
-CREATE POLICY "Users can update their own assignments"
-  ON assignments FOR UPDATE
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
-```
-
-Two more worth adding at the same time — an `updated_at` trigger and length limits, neither of which the
+Two things are still worth adding at the same time — an `updated_at` trigger and length limits, neither of which the
 schema has:
 
 ```sql
@@ -183,6 +175,17 @@ Note that `scripts/001_...sql` is **not idempotent** — the `CREATE POLICY` sta
 the file twice. Run it once on a fresh project. `002` drops each policy before creating it, so it can be
 re-run safely; new migrations should follow that pattern rather than 001's.
 
+**Upgrading an existing database.** A database created at 2.9.0 or earlier needs
+`scripts/003_migrate_2_9_0_to_2_14_5.sql` instead of the two files above: it adds the `classes` table,
+repairs the `assignments` policies (including the missing `WITH CHECK`), and narrows the `status` constraint
+to the two values the code still recognises. It is one transaction and safe to run more than once, including
+on a database that has already had `002` applied.
+
+Databases created from `001` between 2026-09-03 and 2.14.5 are a special case worth checking for: that
+version of the file had a stray clause after the SELECT policy which made Postgres stop there, so the table
+ended up with a SELECT policy and no INSERT, UPDATE or DELETE policy — an app that reads but cannot write.
+Running `003` repairs that too. The verification query below will show you which case you are in.
+
 Verify RLS is on before going live:
 
 ```sql
@@ -191,6 +194,17 @@ SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('assignments', 'c
 ```
 
 If that returns `false`, every row in the table is readable by anyone with the anon key.
+
+And that the policies themselves are all there:
+
+```sql
+SELECT tablename, cmd, with_check IS NOT NULL AS has_with_check
+FROM pg_policies WHERE tablename IN ('assignments', 'classes') ORDER BY tablename, cmd;
+```
+
+Expect eight rows — four per table, one for each of SELECT, INSERT, UPDATE and DELETE — with
+`has_with_check` true on both INSERT rows and both UPDATE rows. Fewer rows than that, or an UPDATE without
+its check, means the schema needs `003`.
 
 ### 3.4 Configure the environment
 
@@ -426,7 +440,8 @@ SELECT count(*) FROM assignments
 WHERE status <> 'completed' AND due_date < now() - interval '90 days';
 ```
 
-**Upgrading.** Pull, `bun install`, run any new files in `scripts/` in order, rebuild. There is no migration
+**Upgrading.** Pull, `bun install`, run any new files in `scripts/` in order, rebuild. Coming from 2.9.0 or
+earlier, `003_migrate_2_9_0_to_2_14_5.sql` is the only one you need — it covers `002` as well. There is no migration
 runner and no schema version tracking, so keep your own note of which SQL files you have applied.
 
 **Removing a user.** Deleting the row from `auth.users` cascades to their assignments. The in-app Danger Zone
