@@ -26,8 +26,10 @@
 -- if any step fails, none of it is applied.
 --
 -- Deliberately *not* here, because neither is part of the 2.9.0 -> 2.14.5
--- delta: the `updated_at` trigger (audit M3, still open) and the column length
--- constraints. Both are in `docs/self-hosting.md` if you want them.
+-- delta: the `updated_at` trigger and the column length constraints. The
+-- trigger shipped afterwards as `004_updated_at_trigger.sql` and every
+-- deployment needs it, so run that next. The length constraints are in
+-- `docs/self-hosting.md` if you want them.
 --
 -- Run it in the Supabase SQL editor.
 

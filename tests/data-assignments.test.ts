@@ -156,26 +156,23 @@ describe("updateAssignment", () => {
     expect(calls[0].payload).not.toHaveProperty("subject");
   });
 
-  // Audit M3 wants this moved to a database trigger. Until it is, the client is
-  // the only thing maintaining it, so it has to be here on every update.
-  test("refreshes updated_at", async () => {
-    const before = Date.now();
+  // The `handle_updated_at` trigger owns the column now (scripts/004, audit M3).
+  // Sending it from here would be overridden anyway, and would put the app back
+  // to claiming a timestamp it does not control.
+  test("leaves updated_at to the database", async () => {
     await data.updateAssignment("a-1", { title: "Renamed" });
-    const { updated_at } = calls[0].payload as { updated_at: string };
 
-    expect(Date.parse(updated_at)).toBeGreaterThanOrEqual(before);
-    expect(Date.parse(updated_at)).toBeLessThanOrEqual(Date.now());
+    expect(calls[0].payload).not.toHaveProperty("updated_at");
   });
 });
 
 describe("setAssignmentStatus", () => {
-  test("writes the status against the row, and refreshes updated_at", async () => {
+  test("writes nothing but the status, against the given row", async () => {
     await data.setAssignmentStatus("a-2", "completed");
 
     expect(calls[0].op).toBe("update");
     expect(calls[0].eq).toEqual(["id", "a-2"]);
-    expect(calls[0].payload).toMatchObject({ status: "completed" });
-    expect(calls[0].payload).toHaveProperty("updated_at");
+    expect(calls[0].payload).toEqual({ status: "completed" });
   });
 
   test("reopening writes pending", async () => {

@@ -88,10 +88,11 @@ export async function createAssignment(draft: AssignmentDraft): Promise<void> {
 export async function updateAssignment(id: string, patch: Partial<AssignmentDraft>): Promise<void> {
   const supabase = createClient();
 
-  const { error } = await supabase
-    .from("assignments")
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq("id", id);
+  // `updated_at` is deliberately absent: the `handle_updated_at` trigger sets it
+  // (scripts/004). A timestamp the client sends is one the client can falsify,
+  // and one that every write path has to remember — which is how the Canvas
+  // import ended up not setting it at all.
+  const { error } = await supabase.from("assignments").update(patch).eq("id", id);
 
   assertWritten(error, "save your changes");
 }
@@ -99,10 +100,7 @@ export async function updateAssignment(id: string, patch: Partial<AssignmentDraf
 export async function setAssignmentStatus(id: string, status: Status): Promise<void> {
   const supabase = createClient();
 
-  const { error } = await supabase
-    .from("assignments")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", id);
+  const { error } = await supabase.from("assignments").update({ status }).eq("id", id);
 
   assertWritten(error, status === "completed" ? "mark this complete" : "reopen this assignment");
 }
