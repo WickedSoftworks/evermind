@@ -1,10 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+/**
+ * @param extraRequestHeaders headers to forward to the render, added to whatever the
+ *   browser sent. Read fresh each time a response is built so that cookies Supabase
+ *   has just refreshed are included.
+ */
+export async function updateSession(request: NextRequest, extraRequestHeaders: Record<string, string> = {}) {
+  const nextResponse = () => {
+    const headers = new Headers(request.headers);
+    for (const [key, value] of Object.entries(extraRequestHeaders)) {
+      headers.set(key, value);
+    }
+    return NextResponse.next({ request: { headers } });
+  };
+
+  let supabaseResponse = nextResponse();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,9 +29,7 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => {
             request.cookies.set(name, value);
           });
-          supabaseResponse = NextResponse.next({
-            request,
-          });
+          supabaseResponse = nextResponse();
           cookiesToSet.forEach(({ name, value, options }) => {
             supabaseResponse.cookies.set(name, value, options);
           });

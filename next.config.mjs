@@ -29,39 +29,49 @@ const nextConfig = {
     // down an error, you can uncomment it if you want
     // removeConsole: process.env.NODE_ENV === "production",
   },
+  // Content-Security-Policy is not here: it carries a per-request nonce, so it is set
+  // by the proxy instead (see lib/security-headers.ts). These are static, and being
+  // here means they also cover the static assets the proxy does not run for.
   headers() {
     return [
       {
-        source: '/',
+        source: "/:path*",
         headers: [
           {
-            key: 'Content-Security-Policy',
-            value: 'Content Security Policy'
+            // Two years, matching the preload list's minimum. Only add `preload` once
+            // you are certain every subdomain will stay on HTTPS - it is hard to undo.
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains",
           },
           {
-            key: 'Strict-Transport-Security',
-            value: 'Strict Transport Security'
+            // Belt and braces with the CSP's `frame-ancestors 'none'`, for old browsers.
+            key: "X-Frame-Options",
+            value: "DENY",
           },
           {
-            key: 'X-Frame-Options',
-            value: 'Frame Options'
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
           {
-            key: 'X-Content-Type-Options',
-            value: 'Content Type Options'
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
           },
           {
-            key: 'Referrer-Policy',
-            value: 'Refferrer Policy'
+            // The app asks for none of these, so deny them outright.
+            key: "Permissions-Policy",
+            value:
+              "accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
           },
           {
-            key: 'Permissions-Policy',
-            value: 'Permissions Policy'
-          }
-        ]
-      }
-    ]
-  }
+            // Isolates the session from anything this page opens or is opened by.
+            // OAuth here is a full redirect, so popups are only used by dev tooling.
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

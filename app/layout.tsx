@@ -1,6 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import type React from "react";
 import { Suspense } from "react";
 import { ColorThemeProvider, colorThemeScript } from "@/components/color-theme-provider";
@@ -34,23 +35,28 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Set by the proxy, and the same value the Content-Security-Policy on this response
+  // names. Reading it is what makes every route render per request.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* These run before paint to stop a flash of the wrong theme. Both strings are
             built in this repo from a fixed set of theme ids - no user input reaches them. */}
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: trusted, locally-authored FOUC script */}
-        <script dangerouslySetInnerHTML={{ __html: compactModeScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: compactModeScript }} />
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: trusted, locally-authored FOUC script */}
-        <script dangerouslySetInnerHTML={{ __html: colorThemeScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: colorThemeScript }} />
       </head>
       <body className={`font-sans antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        {/* next-themes emits its own pre-paint script; without the nonce the CSP drops it. */}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem nonce={nonce}>
           <CompactModeProvider>
             <ColorThemeProvider>
               {children}
