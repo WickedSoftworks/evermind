@@ -115,6 +115,54 @@ interface ColorThemeContextType {
 
 const ColorThemeContext = createContext<ColorThemeContextType | undefined>(undefined);
 
+const CUSTOM_THEMES_STORAGE_KEY = "evermind-custom-themes";
+const COLOR_THEME_STORAGE_KEY = "evermind-color-theme";
+
+function isCustomTheme(value: unknown): value is CustomTheme {
+  if (typeof value !== "object" || value === null) return false;
+  const theme = value as Record<string, unknown>;
+  if (typeof theme.id !== "string" || typeof theme.name !== "string") return false;
+  if (typeof theme.colors !== "object" || theme.colors === null) return false;
+  const colors = theme.colors as Record<string, unknown>;
+  return (["primary", "background", "foreground", "card", "accent"] as const).every(
+    (key) => typeof colors[key] === "string",
+  );
+}
+
+/**
+ * Reads the stored custom themes, tolerating a missing, unreadable, malformed or
+ * partially corrupt value. Entries that do not match the CustomTheme shape are
+ * dropped; `null` means nothing usable is stored, so the caller seeds the defaults.
+ */
+function readStoredCustomThemes(): CustomTheme[] | null {
+  let stored: string | null = null;
+  try {
+    stored = localStorage.getItem(CUSTOM_THEMES_STORAGE_KEY);
+  } catch {
+    // Storage can be unavailable entirely (private mode, blocked site data).
+    return null;
+  }
+  if (!stored) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stored);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(parsed)) return null;
+
+  return parsed.filter(isCustomTheme);
+}
+
+function writeCustomThemes(themes: CustomTheme[]) {
+  try {
+    localStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(themes));
+  } catch {
+    // Persisting is best-effort; the themes still apply for this session.
+  }
+}
+
 function applyColorTheme(themeId: string, customThemes: CustomTheme[]) {
   if (themeId === "default") {
     document.documentElement.style.removeProperty("--primary");
@@ -137,19 +185,23 @@ export function ColorThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Load custom themes from localStorage
-    const storedThemes = localStorage.getItem("evermind-custom-themes");
-    let themes: CustomTheme[] = [];
-    if (storedThemes) {
-      themes = JSON.parse(storedThemes);
-      setCustomThemesState(themes);
-    } else {
+    const storedThemes = readStoredCustomThemes();
+    let themes: CustomTheme[];
+    if (storedThemes === null) {
       themes = DEFAULT_CUSTOM_THEMES;
-      setCustomThemesState(DEFAULT_CUSTOM_THEMES);
-      localStorage.setItem("evermind-custom-themes", JSON.stringify(DEFAULT_CUSTOM_THEMES));
+      writeCustomThemes(DEFAULT_CUSTOM_THEMES);
+    } else {
+      themes = storedThemes;
     }
+    setCustomThemesState(themes);
 
     // Load and apply selected color theme
-    const storedColorTheme = localStorage.getItem("evermind-color-theme");
+    let storedColorTheme: string | null = null;
+    try {
+      storedColorTheme = localStorage.getItem(COLOR_THEME_STORAGE_KEY);
+    } catch {
+      storedColorTheme = null;
+    }
     if (storedColorTheme && storedColorTheme !== "default") {
       setColorThemeState(storedColorTheme);
       applyColorTheme(storedColorTheme, themes);
@@ -160,13 +212,17 @@ export function ColorThemeProvider({ children }: { children: ReactNode }) {
 
   const setColorTheme = (themeId: string) => {
     setColorThemeState(themeId);
-    localStorage.setItem("evermind-color-theme", themeId);
+    try {
+      localStorage.setItem(COLOR_THEME_STORAGE_KEY, themeId);
+    } catch {
+      // Persisting is best-effort; the selection still applies for this session.
+    }
     applyColorTheme(themeId, customThemes);
   };
 
   const setCustomThemes = (themes: CustomTheme[]) => {
     setCustomThemesState(themes);
-    localStorage.setItem("evermind-custom-themes", JSON.stringify(themes));
+    writeCustomThemes(themes);
   };
 
   if (!mounted) {
