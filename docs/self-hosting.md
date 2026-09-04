@@ -174,14 +174,20 @@ ALTER TABLE assignments
   ADD CONSTRAINT description_length CHECK (char_length(description) <= 10000);
 ```
 
+Then run `scripts/002_create_classes_table.sql`. It creates the `classes` table behind the saved-class
+picker in Settings: the same four RLS policies, plus a unique index on `(user_id, lower(name))` so the same
+class cannot be saved twice under different capitalisation. Assignments still store their subject as free
+text and hold no reference to this table, so deleting a class never touches existing assignments.
+
 Note that `scripts/001_...sql` is **not idempotent** — the `CREATE POLICY` statements will error if you run
-the file twice. Run it once on a fresh project.
+the file twice. Run it once on a fresh project. `002` drops each policy before creating it, so it can be
+re-run safely; new migrations should follow that pattern rather than 001's.
 
 Verify RLS is on before going live:
 
 ```sql
-SELECT relname, relrowsecurity FROM pg_class WHERE relname = 'assignments';
--- relrowsecurity must be true
+SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('assignments', 'classes');
+-- relrowsecurity must be true for both
 ```
 
 If that returns `false`, every row in the table is readable by anyone with the anon key.
@@ -369,8 +375,16 @@ surfaces. Shipping a build you have never type-checked is a choice with no upsid
 **Keep server error logs.** `compiler.removeConsole` strips `console.error` in production, including the only
 diagnostic in the account-deletion route. Use `removeConsole: { exclude: ['error'] }`.
 
-**Rate limit.** Nothing is throttled. Supabase has built-in auth rate limits (Authentication → Rate Limits);
-raise or lower them to taste. For the app itself, a proxy-level limit on `/api/*` is the cheapest option.
+**Rate limit.** The two `/api/account/*` routes are throttled in `lib/security/rate-limit.ts`: ten exports
+and five deletion attempts per user per ten minutes, behind a coarse cap of thirty requests per minute per
+address. The counters live in the instance's own memory, so a serverless deployment running several
+instances multiplies the effective limit and a cold start clears it — treat it as a guard against a runaway
+client, not against a distributed attacker. A busy public instance wants a proxy-level limit on `/api/*` or
+a shared store instead.
+
+Everything else is unthrottled, and most of it cannot be throttled here: assignment writes and the Canvas
+import go from the browser straight to Postgres without passing through this app at all. Sign-in is
+Supabase's, with its own limits under Authentication → Rate Limits — raise or lower those to taste.
 
 **Pin `@supabase/supabase-js`.** It is specified as `"latest"`. Pin it to the version your lockfile resolved
 so a lockfile refresh cannot pull a major version into a deploy.
