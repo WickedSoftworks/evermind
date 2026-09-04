@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { zonedDayKey } from "@/lib/dates";
+import { clientAddress, rateLimit, tooManyRequests } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { getTimeZone } from "@/lib/timezone-server";
 import type { Assignment } from "@/lib/types";
@@ -8,6 +9,18 @@ export const dynamic = "force-dynamic";
 
 /** Supabase caps a single select at 1000 rows, so pull the table a page at a time. */
 const PAGE_SIZE = 1000;
+
+/**
+ * An export reads the whole assignments table a page at a time, so it is the
+ * most expensive thing a signed-in user can ask this server to do. Ten in ten
+ * minutes is far more than anyone needs and well short of a loop.
+ */
+const PER_USER_LIMIT = 10;
+const PER_USER_WINDOW_MS = 10 * 60 * 1000;
+
+/** Coarse guard on the pre-session work; see the delete route for the reasoning. */
+const PER_ADDRESS_LIMIT = 30;
+const PER_ADDRESS_WINDOW_MS = 60 * 1000;
 
 /**
  * A copy of everything the server holds about the signed-in user.
@@ -31,7 +44,18 @@ interface AccountExport {
   assignments: Assignment[];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // No same-origin check here, unlike the delete route. This is a GET that
+  // changes nothing, and the same-origin policy already stops another site from
+  // reading the response — a cross-site link would only download the file onto
+  // the user's own machine. Demanding same-origin would break a bookmark and
+  // buy nothing.
+  const address = clientAddress(request);
+  const byAddress = rateLimit(`account-export:addr:${address}`, PER_ADDRESS_LIMIT, PER_ADDRESS_WINDOW_MS);
+  if (!byAddress.allowed) {
+    return tooManyRequests(byAddress, "Too many requests. Please wait a moment and try again.");
+  }
+
   const supabase = await createClient();
 
   // The id comes from the session cookie, never from the request, so a caller
@@ -40,6 +64,13 @@ export async function GET() {
 
   if (error || !data?.user) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+
+  // Keyed by user id rather than address, so one person on a shared network
+  // cannot exhaust everyone else's budget.
+  const byUser = rateLimit(`account-export:user:${data.user.id}`, PER_USER_LIMIT, PER_USER_WINDOW_MS);
+  if (!byUser.allowed) {
+    return tooManyRequests(byUser, "You have exported your data several times just now. Please wait a few minutes.");
   }
 
   const user = data.user;

@@ -156,15 +156,20 @@ rule. A service-role key reaching the browser hands every row in the database to
 
 ### 4.3 Account deletion
 
-`POST /api/account/delete` is the only API route in the application:
+`POST /api/account/delete` is the destructive one of the two `/api/account/*` routes:
 
-1. Resolves the user from the session cookie — never from the request body, so the endpoint can only ever
+1. Rejects anything that did not come from this site: `Sec-Fetch-Site` when the browser sends one, the
+   `Origin` header otherwise (`lib/security/origin.ts`). Supabase's `SameSite=Lax` cookies already block a
+   cross-site POST, but that is a default the app never sets, so it is asserted rather than assumed.
+2. Throttles — thirty requests per minute per address before the session lookup, then five per ten minutes
+   per user after it (`lib/security/rate-limit.ts`).
+3. Resolves the user from the session cookie — never from the request body, so the endpoint can only ever
    delete the caller.
-2. Refuses with a clear 500 if `SUPABASE_SERVICE_ROLE_KEY` is unset, so a misconfigured deployment fails
+4. Refuses with a clear 500 if `SUPABASE_SERVICE_ROLE_KEY` is unset, so a misconfigured deployment fails
    loudly rather than silently.
-3. Calls `auth.admin.deleteUser(id)` with the service-role client. Assignments go with it: `user_id`
+5. Calls `auth.admin.deleteUser(id)` with the service-role client. Assignments go with it: `user_id`
    references `auth.users(id) ON DELETE CASCADE`.
-4. Signs the session out.
+6. Signs the session out.
 
 The client (`delete-account-dialog.tsx`) requires the user to type their own email address, then clears the
 three `evermind-*` localStorage keys and redirects to login.
