@@ -1,0 +1,44 @@
+# Evermind — single service, pointed at a Supabase project you already have.
+#
+#   docker compose --env-file .env.local up --build
+#
+# The `--env-file` matters. Compose reads `.env` for the `${...}` substitutions
+# below, and this project keeps its configuration in `.env.local` (see
+# `.example.env`), so without it the two build arguments come out empty and the
+# build stops with a message saying so.
+#
+# There is no database service here. Evermind talks to Supabase — hosted or
+# self-hosted — for Postgres, Auth and row-level security, and pointing it at a
+# bare Postgres container would give it none of those.
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        # Inlined into the browser bundle at build time, not read at startup, so
+        # changing either of these means rebuilding the image rather than
+        # restarting the container.
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set it in .env.local}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set it in .env.local}
+    image: evermind:latest
+    # Read at runtime, and the reason the file is mounted into the environment
+    # rather than baked in: SUPABASE_SERVICE_ROLE_KEY bypasses row-level
+    # security entirely, so it must not exist in an image layer.
+    env_file:
+      - .env.local
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # The app holds no state of its own — everything lives in Supabase — so a
+    # read-only root filesystem is nearly free here. Nearly, because Next writes
+    # its incremental cache under `.next/cache`, which then needs a writable
+    # mount of its own. Worth doing on a public instance, once you have watched
+    # the container come up clean with it:
+    #
+    #   read_only: true
+    #   tmpfs:
+    #     - /tmp
+    #     - /app/.next/cache:uid=1000,gid=1000

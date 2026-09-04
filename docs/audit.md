@@ -75,14 +75,9 @@ Things a user would reasonably expect a deadline tracker to have, which it does 
 
 ### 3.2 Infrastructure the project has grown into needing
 
-- **A second migration file, and a migration convention.** `scripts/001_...sql` uses `IF NOT EXISTS` for the
-  table and index but bare `CREATE POLICY` for the policies, so re-running it errors. There is no way to
-  express a schema change today except editing file 001 in place, which existing deployments will never pick
-  up.
 - **Generated database types.** `lib/types.ts` is hand-written and can drift from the schema silently.
   `supabase gen types typescript` removes that class of error and makes the untyped `.from("assignments")`
   calls type-safe.
-- **A `Dockerfile` and `compose.yaml`**, given the project invites self-hosting.
 - **Structured error reporting.** `console.error` into a platform log is the whole strategy.
 - **Accessibility review.** Priority in the weekly grid is conveyed by a coloured dot alone
   (`weekly-view.tsx:96-99`) with no text alternative; there is no skip link; keyboard traversal of the

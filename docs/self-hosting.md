@@ -322,40 +322,32 @@ optimisation service, and no special routing.
 
 ### Docker
 
-No Dockerfile ships with the project. This one works:
+A `Dockerfile` and a `compose.yaml` ship with the project. With `.env.local` filled in:
 
-```dockerfile
-FROM oven/bun:1 AS deps
-WORKDIR /app
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
-
-FROM oven/bun:1 AS build
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
-RUN bun run build
-
-FROM oven/bun:1 AS run
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./
-EXPOSE 3000
-CMD ["bun", "run", "start"]
+```bash
+docker compose --env-file .env.local up --build
 ```
 
-`NEXT_PUBLIC_*` values are inlined at **build** time, so they must be build arguments, not just runtime
-environment. `SUPABASE_SERVICE_ROLE_KEY` is read at runtime and must be passed to the container — never baked
-into the image.
+The `--env-file` is not optional. Compose reads `.env` for the `${...}` substitutions in `compose.yaml`, and
+this project keeps its configuration in `.env.local`, so without it the two build arguments arrive empty and
+the build stops and tells you so.
 
-For a smaller image, add `output: 'standalone'` to `next.config.mjs` and copy `.next/standalone` instead.
+There is no database service in the compose file. Evermind talks to Supabase for Postgres, Auth and RLS;
+a bare Postgres container would give it none of those.
+
+**`NEXT_PUBLIC_*` values are substituted into the JavaScript at build time**, not read when the server
+starts, so they are build arguments and changing either one means rebuilding rather than restarting.
+Everything else — `SUPABASE_SERVICE_ROLE_KEY` above all, which bypasses row-level security for every user —
+is read at runtime and comes from `env_file`, so that it never exists in an image layer.
+
+The image builds with bun, matching the lockfile and CI, and runs the compiled `.next/standalone` server on
+Node: by then nothing is being compiled, and Next's standalone entrypoint is written against Node's runtime.
+Both stages are Alpine so the musl builds of SWC, lightningcss and Tailwind's oxide binary match. To run
+everything on bun instead, change the last stage's base image to `oven/bun:1.4.0-alpine` and its command to
+`["bun", "server.js"]`.
+
+Standalone output is opt-in, through `BUILD_STANDALONE=1` in `next.config.mjs`. The Dockerfile sets it; a
+Vercel build does not, and is unaffected.
 
 ---
 

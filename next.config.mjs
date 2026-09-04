@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // `.next/standalone` — a self-contained server with only the dependencies it
+  // actually traced — is what the Dockerfile copies into the runtime image.
+  // Opt-in rather than always on, so the Vercel deployment keeps building the
+  // way it already does.
+  output: process.env.BUILD_STANDALONE ? "standalone" : undefined,
   typescript: {
     ignoreBuildErrors: false,
   },

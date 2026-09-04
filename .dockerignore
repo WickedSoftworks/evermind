@@ -1,0 +1,32 @@
+# Everything here is either rebuilt inside the image, useless to `next build`,
+# or must never reach a layer. Secrets are the third kind: `.env.local` holds
+# the service role key, which bypasses row-level security for every user.
+.env
+.env.*
+!.example.env
+
+.git
+.github
+.gitignore
+
+node_modules
+.next
+out
+tsconfig.tsbuildinfo
+
+# Not read by the build, and skipping them keeps the context small.
+docs
+tests
+scripts
+README.md
+LICENSE
+biome.jsonc
+
+Dockerfile
+compose.yaml
+.dockerignore
+
+.vscode
+.idea
+.DS_Store
+npm-debug.log*
