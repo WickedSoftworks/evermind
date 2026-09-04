@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { CalendarIcon, Clock, Plus } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
+import { ClassCombobox } from "@/components/class-combobox";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -22,6 +23,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import type { Assignment, Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+/** The demo data on the preview page uses these, so the picker has something to show. */
+const PREVIEW_SUBJECTS = ["Mathematics", "History", "Physics", "English", "Chemistry", "Art"];
 
 interface PreviewAddAssignmentDialogProps {
   onAdd: (assignment: Assignment) => void;
@@ -49,7 +53,7 @@ export function PreviewAddAssignmentDialog({ onAdd }: PreviewAddAssignmentDialog
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!dueDate) return;
+    if (!dueDate || !subject.trim()) return;
 
     const [hours, minutes] = dueTime.split(":").map(Number);
     const combinedDate = new Date(dueDate);
@@ -99,13 +103,7 @@ export function PreviewAddAssignmentDialog({ onAdd }: PreviewAddAssignmentDialog
             </div>
             <div className="grid gap-2">
               <Label htmlFor="subject">Subject</Label>
-              <Input
-                id="subject"
-                placeholder="Mathematics"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                required
-              />
+              <ClassCombobox id="subject" value={subject} onValueChange={setSubject} options={PREVIEW_SUBJECTS} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Description (optional)</Label>

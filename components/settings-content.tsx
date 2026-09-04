@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ExternalLink,
   FileSpreadsheet,
+  GraduationCap,
   Loader2,
   Pencil,
   Plus,
@@ -40,9 +41,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CLASSES_KEY, useClasses, useUnsavedSubjects } from "@/hooks/use-classes";
 import { formatDueDate, isValidDate, parseDueDate } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
-import type { Priority } from "@/lib/types";
+import type { Class, Priority } from "@/lib/types";
 
 interface SettingsContentProps {
   user: SupabaseUser;
@@ -167,6 +169,95 @@ export function SettingsContent({ user }: SettingsContentProps) {
       accent: "#f1f5f9",
     },
   });
+
+  // Saved classes, used to fill the subject field on an assignment quickly.
+  const { data: classes } = useClasses();
+  const unsavedSubjects = useUnsavedSubjects();
+  const [isAddingClass, setIsAddingClass] = useState(false);
+  const [editingClass, setEditingClass] = useState<Class | null>(null);
+  const [newClassName, setNewClassName] = useState("");
+  const [classError, setClassError] = useState<string | null>(null);
+  const [isSavingClass, setIsSavingClass] = useState(false);
+
+  /**
+   * The table has a unique index on (user_id, lower(name)), but catching the
+   * clash here means a readable message instead of a raw Postgres error.
+   */
+  const findDuplicateClass = (name: string, ignoreId?: string) =>
+    (classes ?? []).find((c) => c.id !== ignoreId && c.name.trim().toLowerCase() === name.trim().toLowerCase());
+
+  const saveClass = async (name: string, ignoreId?: string): Promise<boolean> => {
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+
+    if (findDuplicateClass(trimmed, ignoreId)) {
+      setClassError(`You already have a class called "${trimmed}".`);
+      return false;
+    }
+
+    setIsSavingClass(true);
+    setClassError(null);
+
+    const supabase = createClient();
+    const { error } = ignoreId
+      ? await supabase.from("classes").update({ name: trimmed }).eq("id", ignoreId)
+      : await supabase.from("classes").insert({ user_id: user.id, name: trimmed });
+
+    setIsSavingClass(false);
+
+    if (error) {
+      console.error("Could not save class:", error);
+      setClassError("Could not save that class. Please try again.");
+      return false;
+    }
+
+    mutate(CLASSES_KEY);
+    return true;
+  };
+
+  const handleAddClass = async () => {
+    if (await saveClass(newClassName)) {
+      setNewClassName("");
+      setIsAddingClass(false);
+    }
+  };
+
+  const handleEditClass = (classToEdit: Class) => {
+    setEditingClass(classToEdit);
+    setNewClassName(classToEdit.name);
+    setClassError(null);
+    setIsAddingClass(false);
+  };
+
+  const handleSaveClassEdit = async () => {
+    if (!editingClass) return;
+    if (await saveClass(newClassName, editingClass.id)) {
+      handleCancelClassEdit();
+    }
+  };
+
+  const handleCancelClassEdit = () => {
+    setEditingClass(null);
+    setIsAddingClass(false);
+    setNewClassName("");
+    setClassError(null);
+  };
+
+  const handleDeleteClass = async (classId: string) => {
+    setClassError(null);
+
+    const supabase = createClient();
+    const { error } = await supabase.from("classes").delete().eq("id", classId);
+
+    if (error) {
+      console.error("Could not delete class:", error);
+      setClassError("Could not delete that class. Please try again.");
+      return;
+    }
+
+    // Assignments store their subject as text, so nothing they hold changes.
+    mutate(CLASSES_KEY);
+  };
 
   const handleColorThemeChange = (value: string) => {
     setColorTheme(value);
@@ -509,6 +600,119 @@ export function SettingsContent({ user }: SettingsContentProps) {
       </TabsContent>
 
       <TabsContent value="assignments" className="mt-6 space-y-6">
+        {/* Predefined classes */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5" />
+              My Classes
+            </CardTitle>
+            <CardDescription>
+              Save the classes you're taking and pick one when adding an assignment, instead of typing the subject every
+              time. You can still type anything that isn't on this list.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(classes ?? []).length > 0 && (
+              <div className="space-y-2">
+                {(classes ?? []).map((c) => (
+                  <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border">
+                    <span className="font-medium truncate">{c.name}</span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditClass(c)}
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label={`Edit ${c.name}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteClass(c.id)}
+                        className="text-destructive hover:text-destructive"
+                        aria-label={`Delete ${c.name}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add/Edit class form */}
+            {isAddingClass || editingClass ? (
+              <div className="space-y-4 p-4 border rounded-lg">
+                <div className="grid gap-2">
+                  <Label htmlFor="class-name">{editingClass ? "Edit Class Name" : "Class Name"}</Label>
+                  <Input
+                    id="class-name"
+                    placeholder="Mathematics"
+                    value={newClassName}
+                    onChange={(e) => {
+                      setNewClassName(e.target.value);
+                      setClassError(null);
+                    }}
+                    maxLength={100}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={editingClass ? handleSaveClassEdit : handleAddClass}
+                    disabled={!newClassName.trim() || isSavingClass}
+                  >
+                    {isSavingClass && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {editingClass ? "Save Changes" : "Save Class"}
+                  </Button>
+                  <Button variant="outline" onClick={handleCancelClassEdit} disabled={isSavingClass}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                onClick={() => {
+                  setIsAddingClass(true);
+                  setClassError(null);
+                }}
+                variant="outline"
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Class
+              </Button>
+            )}
+
+            {classError && <p className="text-sm text-destructive">{classError}</p>}
+
+            {/* Subjects already in use that aren't saved yet - one click to keep them. */}
+            {unsavedSubjects.length > 0 && (
+              <div className="space-y-2 pt-2 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Already used on your assignments — tap to save as a class:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {unsavedSubjects.map((subject) => (
+                    <Button
+                      key={subject}
+                      variant="secondary"
+                      size="sm"
+                      disabled={isSavingClass}
+                      onClick={() => saveClass(subject)}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      {subject}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Google Classroom Import */}
         <Card>
           <CardHeader>

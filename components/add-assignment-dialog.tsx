@@ -5,6 +5,7 @@ import { CalendarIcon, Plus } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useSWRConfig } from "swr";
+import { ClassCombobox } from "@/components/class-combobox";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -21,12 +22,14 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useSubjectOptions } from "@/hooks/use-classes";
 import { createClient } from "@/lib/supabase/client";
 import type { Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function AddAssignmentDialog() {
   const { mutate } = useSWRConfig();
+  const subjectOptions = useSubjectOptions();
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [title, setTitle] = useState("");
@@ -48,7 +51,9 @@ export function AddAssignmentDialog() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!dueDate) {
+    // The subject used to be a `required` input; the combobox cannot express
+    // that natively, so the check moves here.
+    if (!dueDate || !subject.trim()) {
       return;
     }
 
@@ -112,13 +117,7 @@ export function AddAssignmentDialog() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="subject">Subject</Label>
-              <Input
-                id="subject"
-                placeholder="Mathematics"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                required
-              />
+              <ClassCombobox id="subject" value={subject} onValueChange={setSubject} options={subjectOptions} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Description (optional)</Label>
