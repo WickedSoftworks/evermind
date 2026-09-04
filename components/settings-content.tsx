@@ -1021,7 +1021,9 @@ export function SettingsContent({ user }: SettingsContentProps) {
                   className={`h-8 overflow-hidden rounded-md border-2 transition-all ${selectedColorTheme === t.id ? "border-foreground" : "border-transparent"}`}
                   title={t.name}
                 >
-                  <ThemeSwatch theme={t} className="h-full w-full" />
+                  {/* Carries its own radius, as the swatch below the theme list does, so the
+                      colour block is the right shape whatever the button around it does. */}
+                  <ThemeSwatch theme={t} className="h-full w-full rounded-md" />
                 </button>
               ))}
             </div>

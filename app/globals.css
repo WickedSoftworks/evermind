@@ -182,8 +182,16 @@
   font-size: 0.8125rem;
 }
 
-/* Compact buttons */
-:root.compact button {
+/* Compact buttons.
+ *
+ * Scoped to the Button component rather than every `<button>`, like the rules
+ * around it. A bare element selector also caught controls whose padding is
+ * load-bearing: the theme swatches, which clip a colour block to their own
+ * rounded corners and so turned square once padding pushed the block out of
+ * the corners; the light/dark toggle in the theme editor, which grew taller in
+ * compact mode than out of it; and two buttons styled as links inside a
+ * paragraph on the privacy page, which do not want vertical padding at all. */
+:root.compact [data-slot="button"] {
   padding-top: 0.375rem;
   padding-bottom: 0.375rem;
 }
