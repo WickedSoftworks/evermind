@@ -1,9 +1,18 @@
 "use client";
 
-import { Calendar, CheckCircle2, Clock, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { useSWRConfig } from "swr";
 import { useTimeZone } from "@/components/timezone-provider";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +46,9 @@ export function AssignmentCard({
 }: AssignmentCardProps) {
   const { mutate } = useSWRConfig();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const timeZone = useTimeZone();
 
   const priorityColors = {
@@ -70,11 +82,34 @@ export function AssignmentCard({
   const handleDelete = async () => {
     if (isPreview) {
       onPreviewDelete?.(assignment.id);
+      setDeleteDialogOpen(false);
       return;
     }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
     const supabase = createClient();
-    await supabase.from("assignments").delete().eq("id", assignment.id);
+    const { error } = await supabase.from("assignments").delete().eq("id", assignment.id);
+
+    setIsDeleting(false);
+
+    if (error) {
+      // Deleting used to be fire-and-forget, so a failure just left the card
+      // sitting there. Keep the dialog open and say what happened.
+      console.error("Could not delete assignment:", error);
+      setDeleteError("Could not delete this assignment. Please try again.");
+      return;
+    }
+
+    setDeleteDialogOpen(false);
     mutate("assignments");
+  };
+
+  const handleDeleteDialogChange = (next: boolean) => {
+    if (isDeleting) return;
+    setDeleteDialogOpen(next);
+    setDeleteError(null);
   };
 
   const handleReopen = async () => {
@@ -125,7 +160,7 @@ export function AssignmentCard({
                 Reopen
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+            <DropdownMenuItem onClick={() => setDeleteDialogOpen(true)} className="text-destructive">
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
             </DropdownMenuItem>
@@ -154,6 +189,30 @@ export function AssignmentCard({
           </div>
         </div>
       </CardContent>
+
+      {/* Kept outside the dropdown: Radix unmounts the menu content when the menu
+          closes, which would tear down a dialog nested inside it. */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this assignment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-medium text-foreground">{assignment.title}</span> will be permanently deleted. This
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <Button variant="destructive" disabled={isDeleting} onClick={handleDelete}>
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {!isPreview && editDialogOpen && (
         <Suspense fallback={null}>
