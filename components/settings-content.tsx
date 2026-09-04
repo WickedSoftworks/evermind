@@ -17,7 +17,16 @@ import {
 import { useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { useSWRConfig } from "swr";
-import { type CustomTheme, DEFAULT_CUSTOM_THEMES, useColorTheme } from "@/components/color-theme-provider";
+import {
+  BASE_DARK,
+  BASE_LIGHT,
+  type CustomTheme,
+  DEFAULT_CUSTOM_THEMES,
+  PALETTE_FIELDS,
+  type Palette,
+  pickForeground,
+  useColorTheme,
+} from "@/components/color-theme-provider";
 import { useCompactMode } from "@/components/compact-mode-provider";
 import { DeleteAccountDialog } from "@/components/delete-account-dialog";
 import { ExportDataButton } from "@/components/export-data-button";
@@ -133,6 +142,35 @@ const PRESET_THEMES = [
   { id: "dark", name: "Dark" },
 ];
 
+/** A new theme starts from the app's own palettes, so only the parts edited change. */
+function createBlankTheme(): CustomTheme {
+  return {
+    id: "",
+    name: "",
+    light: { ...BASE_LIGHT, primary: "#0ea5e9", primaryForeground: pickForeground("#0ea5e9", "light") },
+    dark: { ...BASE_DARK, primary: "#38bdf8", primaryForeground: pickForeground("#38bdf8", "dark") },
+  };
+}
+
+/** `<input type="color">` only understands hex, so anything else falls back. */
+function toHexInput(value: string, fallback: string): string {
+  return /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+}
+
+/**
+ * Previews a theme's primary colour. The light and dark values are both rendered and
+ * chosen between in CSS, so the swatch is right on the first paint without reading
+ * the resolved theme during hydration.
+ */
+function ThemeSwatch({ theme, className }: { theme: { light: Palette; dark: Palette }; className?: string }) {
+  return (
+    <span className={`relative block overflow-hidden ${className ?? ""}`}>
+      <span className="absolute inset-0 dark:hidden" style={{ backgroundColor: theme.light.primary }} />
+      <span className="absolute inset-0 hidden dark:block" style={{ backgroundColor: theme.dark.primary }} />
+    </span>
+  );
+}
+
 export function SettingsContent({ user }: SettingsContentProps) {
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
@@ -158,17 +196,8 @@ export function SettingsContent({ user }: SettingsContentProps) {
   const { mutate } = useSWRConfig();
   const timeZone = useTimeZone();
 
-  const [newTheme, setNewTheme] = useState<CustomTheme>({
-    id: "",
-    name: "",
-    colors: {
-      primary: "#0ea5e9",
-      background: "#ffffff",
-      foreground: "#0f172a",
-      card: "#ffffff",
-      accent: "#f1f5f9",
-    },
-  });
+  const [newTheme, setNewTheme] = useState<CustomTheme>(createBlankTheme);
+  const [editorMode, setEditorMode] = useState<"light" | "dark">("light");
 
   // Saved classes, used to fill the subject field on an assignment quickly.
   const { data: classes } = useClasses();
@@ -263,6 +292,28 @@ export function SettingsContent({ user }: SettingsContentProps) {
     setColorTheme(value);
   };
 
+  /**
+   * Edits one field of whichever palette is on screen. The on-primary colour follows
+   * the primary for as long as the user has not picked one themselves.
+   */
+  const updatePaletteField = (key: keyof Palette, value: string) => {
+    setNewTheme((prev) => {
+      const current = prev[editorMode];
+      const palette: Palette = { ...current, [key]: value };
+      if (key === "primary" && current.primaryForeground === pickForeground(current.primary, editorMode)) {
+        palette.primaryForeground = pickForeground(value, editorMode);
+      }
+      return { ...prev, [editorMode]: palette };
+    });
+  };
+
+  const copyPaletteFromOtherMode = () => {
+    setNewTheme((prev) => ({
+      ...prev,
+      [editorMode]: { ...prev[editorMode === "light" ? "dark" : "light"] },
+    }));
+  };
+
   const handleAddTheme = () => {
     if (!newTheme.name.trim()) return;
 
@@ -274,17 +325,8 @@ export function SettingsContent({ user }: SettingsContentProps) {
     const updatedThemes = [...customThemes, theme];
     setCustomThemes(updatedThemes);
     setIsAddingTheme(false);
-    setNewTheme({
-      id: "",
-      name: "",
-      colors: {
-        primary: "#0ea5e9",
-        background: "#ffffff",
-        foreground: "#0f172a",
-        card: "#ffffff",
-        accent: "#f1f5f9",
-      },
-    });
+    setNewTheme(createBlankTheme());
+    setEditorMode("light");
   };
 
   const handleDeleteTheme = (themeId: string) => {
@@ -297,41 +339,28 @@ export function SettingsContent({ user }: SettingsContentProps) {
 
   const handleEditTheme = (theme: CustomTheme) => {
     setEditingTheme(theme);
-    setNewTheme({ ...theme });
+    setNewTheme({ ...theme, light: { ...theme.light }, dark: { ...theme.dark } });
     setIsAddingTheme(false);
+    setEditorMode("light");
   };
 
   const handleSaveEdit = () => {
     if (!editingTheme || !newTheme.name.trim()) return;
 
+    // Writing the themes re-applies the live one on its own, so there is nothing to
+    // force here even when the theme being edited is the one currently selected.
     const updatedThemes = customThemes.map((t) =>
       t.id === editingTheme.id ? { ...newTheme, id: editingTheme.id } : t,
     );
     setCustomThemes(updatedThemes);
-
-    // Re-apply if this theme is currently selected
-    if (selectedColorTheme === editingTheme.id) {
-      // Force re-apply by setting to default then back
-      setColorTheme("default");
-      setTimeout(() => setColorTheme(editingTheme.id), 0);
-    }
 
     handleCancelEdit();
   };
 
   const handleCancelEdit = () => {
     setEditingTheme(null);
-    setNewTheme({
-      id: "",
-      name: "",
-      colors: {
-        primary: "#0ea5e9",
-        background: "#ffffff",
-        foreground: "#0f172a",
-        card: "#ffffff",
-        accent: "#f1f5f9",
-      },
-    });
+    setNewTheme(createBlankTheme());
+    setEditorMode("light");
   };
 
   // Canvas CSV/file import handler
@@ -942,7 +971,10 @@ export function SettingsContent({ user }: SettingsContentProps) {
         <Card>
           <CardHeader>
             <CardTitle>Color Theme</CardTitle>
-            <CardDescription>Customize the accent colors of the application</CardDescription>
+            <CardDescription>
+              Recolour the whole application. Each theme carries its own light and dark palette, so the appearance
+              setting above still decides which one you see.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
@@ -978,28 +1010,20 @@ export function SettingsContent({ user }: SettingsContentProps) {
                 style={{ backgroundColor: "oklch(0.55 0.15 180)" }}
                 title="Default (Teal)"
               />
-              {DEFAULT_CUSTOM_THEMES.map((t) => (
+              {[
+                ...DEFAULT_CUSTOM_THEMES,
+                ...customThemes.filter((t) => !DEFAULT_CUSTOM_THEMES.find((d) => d.id === t.id)),
+              ].map((t) => (
                 <button
                   type="button"
                   key={t.id}
                   onClick={() => handleColorThemeChange(t.id)}
-                  className={`h-8 rounded-md border-2 transition-all ${selectedColorTheme === t.id ? "border-foreground" : "border-transparent"}`}
-                  style={{ backgroundColor: t.colors.primary }}
+                  className={`h-8 overflow-hidden rounded-md border-2 transition-all ${selectedColorTheme === t.id ? "border-foreground" : "border-transparent"}`}
                   title={t.name}
-                />
+                >
+                  <ThemeSwatch theme={t} className="h-full w-full" />
+                </button>
               ))}
-              {customThemes
-                .filter((t) => !DEFAULT_CUSTOM_THEMES.find((d) => d.id === t.id))
-                .map((t) => (
-                  <button
-                    type="button"
-                    key={t.id}
-                    onClick={() => handleColorThemeChange(t.id)}
-                    className={`h-8 rounded-md border-2 transition-all ${selectedColorTheme === t.id ? "border-foreground" : "border-transparent"}`}
-                    style={{ backgroundColor: t.colors.primary }}
-                    title={t.name}
-                  />
-                ))}
             </div>
           </CardContent>
         </Card>
@@ -1018,7 +1042,7 @@ export function SettingsContent({ user }: SettingsContentProps) {
                   .map((t) => (
                     <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center gap-3">
-                        <div className="h-6 w-6 rounded-full" style={{ backgroundColor: t.colors.primary }} />
+                        <ThemeSwatch theme={t} className="h-6 w-6 rounded-full" />
                         <span className="font-medium">{t.name}</span>
                       </div>
                       <div className="flex items-center gap-1">
@@ -1056,37 +1080,57 @@ export function SettingsContent({ user }: SettingsContentProps) {
                     onChange={(e) => setNewTheme({ ...newTheme, name: e.target.value })}
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="primary-color">Primary Color</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="primary-color"
-                      type="color"
-                      value={newTheme.colors.primary.startsWith("#") ? newTheme.colors.primary : "#0ea5e9"}
-                      onChange={(e) =>
-                        setNewTheme({
-                          ...newTheme,
-                          colors: { ...newTheme.colors, primary: e.target.value },
-                        })
-                      }
-                      className="w-16 h-10 p-1 cursor-pointer"
-                    />
-                    <Input
-                      value={newTheme.colors.primary}
-                      onChange={(e) =>
-                        setNewTheme({
-                          ...newTheme,
-                          colors: { ...newTheme.colors, primary: e.target.value },
-                        })
-                      }
-                      placeholder="#0ea5e9 or oklch(...)"
-                      className="flex-1"
-                    />
+                <div className="flex items-center justify-between gap-2">
+                  <div className="inline-flex rounded-md border p-0.5">
+                    {(["light", "dark"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setEditorMode(mode)}
+                        className={`rounded px-3 py-1 text-sm capitalize transition-colors ${
+                          editorMode === mode ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                        }`}
+                      >
+                        {mode}
+                      </button>
+                    ))}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Use hex colors (#0ea5e9) or OKLCH format (oklch(0.55 0.15 180))
-                  </p>
+                  <Button type="button" variant="ghost" size="sm" onClick={copyPaletteFromOtherMode}>
+                    Copy from {editorMode === "light" ? "dark" : "light"}
+                  </Button>
                 </div>
+
+                <div className="grid gap-4">
+                  {PALETTE_FIELDS.map(({ key, label, hint }) => {
+                    const value = newTheme[editorMode][key];
+                    return (
+                      <div key={key} className="grid gap-2">
+                        <Label htmlFor={`theme-color-${key}`}>{label}</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="color"
+                            aria-label={`${label} colour picker`}
+                            value={toHexInput(value, editorMode === "light" ? "#ffffff" : "#111111")}
+                            onChange={(e) => updatePaletteField(key, e.target.value)}
+                            className="w-16 h-10 p-1 cursor-pointer"
+                          />
+                          <Input
+                            id={`theme-color-${key}`}
+                            value={value}
+                            onChange={(e) => updatePaletteField(key, e.target.value)}
+                            placeholder="#0ea5e9 or oklch(...)"
+                            className="flex-1"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">{hint}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Use hex colors (#0ea5e9) or OKLCH format (oklch(0.55 0.15 180)). The colour picker only handles hex,
+                  so OKLCH values have to be typed.
+                </p>
                 <div className="flex gap-2">
                   {editingTheme ? (
                     <>
