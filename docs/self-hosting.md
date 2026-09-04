@@ -151,35 +151,36 @@ The UPDATE policy carries its `WITH CHECK` clause as of 2.14.5 (audit **C2**), s
 correction to apply by hand here. If you created your database before then, see **Upgrading an existing
 database** below — the clause is missing and a user can reassign one of their rows to another account.
 
-Two things are still worth adding at the same time — an `updated_at` trigger and length limits, neither of which the
-schema has:
+Then run `scripts/002_create_classes_table.sql`. It creates the `classes` table behind the saved-class
+picker in Settings: the same four RLS policies, plus a unique index on `(user_id, lower(name))` so the same
+class cannot be saved twice under different capitalisation. Assignments still store their subject as free
+text and hold no reference to this table, so deleting a class never touches existing assignments.
+
+Then `scripts/004_updated_at_trigger.sql`, which hands `updated_at` to the database (audit **M3**). Without
+it the column is only as accurate as whichever code path last remembered to set it — and as of 2.14.5 no code
+path sets it at all, so it would simply stop moving.
+
+(`003` is the upgrade path from 2.9.0 and is not part of a fresh install — see below.)
+
+Length limits are still worth adding by hand; the schema has none:
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS moddatetime SCHEMA extensions;
-
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON assignments
-  FOR EACH ROW EXECUTE PROCEDURE extensions.moddatetime (updated_at);
-
 ALTER TABLE assignments
   ADD CONSTRAINT title_length       CHECK (char_length(title)       <= 300),
   ADD CONSTRAINT subject_length     CHECK (char_length(subject)     <= 200),
   ADD CONSTRAINT description_length CHECK (char_length(description) <= 10000);
 ```
 
-Then run `scripts/002_create_classes_table.sql`. It creates the `classes` table behind the saved-class
-picker in Settings: the same four RLS policies, plus a unique index on `(user_id, lower(name))` so the same
-class cannot be saved twice under different capitalisation. Assignments still store their subject as free
-text and hold no reference to this table, so deleting a class never touches existing assignments.
-
 Note that `scripts/001_...sql` is **not idempotent** — the `CREATE POLICY` statements will error if you run
 the file twice. Run it once on a fresh project. `002` drops each policy before creating it, so it can be
 re-run safely; new migrations should follow that pattern rather than 001's.
 
 **Upgrading an existing database.** A database created at 2.9.0 or earlier needs
-`scripts/003_migrate_2_9_0_to_2_14_5.sql` instead of the two files above: it adds the `classes` table,
-repairs the `assignments` policies (including the missing `WITH CHECK`), and narrows the `status` constraint
-to the two values the code still recognises. It is one transaction and safe to run more than once, including
-on a database that has already had `002` applied.
+`scripts/003_migrate_2_9_0_to_2_14_5.sql` in place of `001` and `002`: it adds the `classes` table, repairs
+the `assignments` policies (including the missing `WITH CHECK`), and narrows the `status` constraint to the
+two values the code still recognises. It is one transaction and safe to run more than once, including on a
+database that has already had `002` applied. Follow it with `004_updated_at_trigger.sql`, which every
+deployment needs regardless of where it started.
 
 Databases created from `001` between 2026-09-03 and 2.14.5 are a special case worth checking for: that
 version of the file had a stray clause after the SELECT policy which made Postgres stop there, so the table

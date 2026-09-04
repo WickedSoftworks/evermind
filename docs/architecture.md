@@ -178,7 +178,7 @@ three `evermind-*` localStorage keys and redirects to login.
 
 ## 5. Data model
 
-One table. `scripts/001_create_assignments_table.sql`:
+Two tables. `scripts/001_create_assignments_table.sql`:
 
 ```
 assignments
@@ -189,21 +189,38 @@ assignments
   description text   null
   due_date    timestamptz not null
   priority    text   not null  check (low | medium | high)
-  status      text   not null  check (pending | completed | overdue), default 'pending'
+  status      text   not null  check (pending | completed), default 'pending'
   created_at  timestamptz default now()
-  updated_at  timestamptz default now()
+  updated_at  timestamptz default now()  -- maintained by trigger, scripts/004
 
 indexes: user_id, due_date, status
 rls:     enabled; four policies, one per verb, all auth.uid() = user_id
 ```
 
+And `scripts/002_create_classes_table.sql`, which backs the saved-class picker in Settings:
+
+```
+classes
+  id          uuid   pk, default gen_random_uuid()
+  user_id     uuid   not null → auth.users(id) on delete cascade
+  name        text   not null  check (char_length <= 100)
+  created_at  timestamptz default now()
+
+indexes: user_id; unique (user_id, lower(name))
+rls:     enabled; four policies, one per verb, all auth.uid() = user_id
+```
+
+Nothing references `classes`. It fills in the `subject` field on the way to an assignment and is forgotten
+after that, so renaming or deleting a class leaves existing assignments untouched.
+
 Two things about `status` are worth knowing before you write code against it:
 
 - **`'overdue'` is never written.** The application derives overdue-ness at render time as
   `status !== 'completed' && isPast(due_date)`. The stored value is only ever `pending` or `completed`. A
-  timestamp cannot be made stale by a database column, so this is the right decision — but the CHECK
-  constraint and the TypeScript union both still advertise a third state that does not occur.
-- **`updated_at` has no trigger.** It is set by the client on some write paths and not others.
+  timestamp cannot be made stale by a database column, so this is the right decision, and as of
+  `scripts/003` the CHECK constraint and the TypeScript union agree: the third state is gone from both.
+- **`updated_at` belongs to the database.** The `handle_updated_at` trigger (`scripts/004`) sets it on every
+  UPDATE. No client sends it, and one that did would be overridden.
 
 `subject` being free text means there is no course entity: grouping, colour-coding and per-course filtering
 all have nowhere to hang. Introducing a `courses` table is the single highest-leverage schema change
@@ -335,7 +352,8 @@ Useful to know so you do not go looking:
 - **No global state manager.** SWR's cache is the store; React context covers only theming.
 - **No form library**, despite `react-hook-form` being a dependency and `ui/form.tsx` being vendored.
 - **No test suite, no ESLint config, no CI.**
-- **No migration tooling.** One SQL file, run by hand in the Supabase SQL editor.
+- **No migration tooling.** Numbered SQL files, run by hand in the Supabase SQL editor, in order. Nothing
+  records which have been applied.
 - **No server-side validation.** CHECK constraints and RLS are the only enforcement; everything else trusts
   the client.
 
@@ -345,8 +363,8 @@ Useful to know so you do not go looking:
 
 A few notes for the most likely changes.
 
-**Adding a column.** Write `scripts/002_*.sql` rather than editing 001 — existing deployments have already
-run it. Update `lib/types.ts` (or, better, switch to `supabase gen types typescript`). Insert paths that need
+**Adding a column.** Write the next numbered file in `scripts/` rather than editing an existing one —
+deployments have already run those, and will never pick up an edit. Update `lib/types.ts` (or, better, switch to `supabase gen types typescript`). Insert paths that need
 updating: `add-assignment-dialog.tsx`, `edit-assignment-dialog.tsx`, and the Canvas import in
 `settings-content.tsx`.
 
