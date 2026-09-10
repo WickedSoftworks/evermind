@@ -94,18 +94,23 @@ CREATE OR REPLACE FUNCTION public.stamp_completed_at()
   SET search_path = ''
 AS $$
 BEGIN
-  IF NEW.status = 'completed' THEN
-    -- Newly complete: start the clock. Already complete and merely edited:
-    -- leave it, so an edit is not a renewal.
-    IF TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM 'completed' THEN
-      NEW.completed_at := now();
-    END IF;
-  ELSE
-    -- Reopened. Not "paused" — the clock is thrown away, and starts again from
-    -- zero if this is completed a second time.
+  -- Branched on TG_OP rather than written as `TG_OP = 'INSERT' OR OLD.status
+  -- ...`, because `OLD` is null on an INSERT and PostgreSQL does not promise to
+  -- evaluate the halves of an OR left to right. The short version reads better
+  -- and would fail on whichever plan decided to look at `OLD` first.
+  IF NEW.status <> 'completed' THEN
+    -- Reopened, or never completed. Not "paused" — the clock is thrown away,
+    -- and starts again from zero if this is completed a second time.
     NEW.completed_at := NULL;
+  ELSIF TG_OP = 'INSERT' THEN
+    NEW.completed_at := now();
+  ELSIF OLD.status IS DISTINCT FROM 'completed' THEN
+    -- Newly complete on an update.
+    NEW.completed_at := now();
   END IF;
 
+  -- Falling through all three means the row was already complete and was merely
+  -- edited. The stamp stays, so an edit is not a renewal.
   RETURN NEW;
 END;
 $$;
