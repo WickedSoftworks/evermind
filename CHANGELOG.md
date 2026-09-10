@@ -18,6 +18,12 @@ before the new code will work. See the upgrade section of
 
 #### Added
 
+- `supabase/upgrade/2_14_5_to_3_0_0.sql`, a one-shot upgrade for a database built by hand from
+  `scripts/` — every 3.0.0 migration in a single transaction, so a failure halfway leaves nothing
+  applied rather than a database that is half one version and half the other. It also covers what
+  the migrations cannot: a deployment that never ran `002`, the length constraints under the names
+  `docs/self-hosting.md` gave them for the whole of 2.x, and rows written before any length limits
+  existed. Operators using the Supabase CLI do not need it.
 - **Completed assignments are now removed automatically**, a month after you tick them off. Only
   completed work is ever touched — nothing pending is deleted however overdue it is, and reopening
   an assignment starts its clock again from zero. Settings → Assignments → Finished work states the
@@ -55,6 +61,11 @@ before the new code will work. See the upgrade section of
 
 #### Fixed
 
+- `classes.name` was still capped at 100 characters, not the 200 the migration that widened it
+  intended. The 100 comes from the column's inline `CHECK` in `scripts/002`, which that migration
+  added `classes_name_length` alongside rather than replacing — and constraints are conjunctive,
+  so the stricter one silently won. Reachable through `POST /api/v1/classes`, where a name of
+  101–200 characters passed validation and was then refused by Postgres.
 - Focus was dumped to `<body>` after every delete or edit from an assignment card's menu. The
   dialogs are opened from a dropdown item that no longer exists by the time they close, so
   Radix had nothing to restore focus to; it now returns to the card's own menu button.

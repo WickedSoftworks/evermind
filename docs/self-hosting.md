@@ -184,6 +184,12 @@ Note that `scripts/001_...sql` is **not idempotent** — the `CREATE POLICY` sta
 the file twice. Run it once on a fresh project. `002` drops each policy before creating it, so it can be
 re-run safely; new migrations should follow that pattern rather than 001's.
 
+> **This section describes the 2.x schema**, which is what `scripts/` builds. From 3.0.0 the schema is the
+> five files in [`supabase/migrations/`](../supabase/migrations/), and a fresh install runs those instead of
+> anything below. To bring an existing 2.14.5 database up to 3.0.0, see **Upgrading to 3.0.0** in §6 — or
+> run [`supabase/upgrade/2_14_5_to_3_0_0.sql`](../supabase/upgrade/2_14_5_to_3_0_0.sql), which is the whole
+> of it in one transaction.
+
 **Upgrading an existing database.** A database created at 2.9.0 or earlier needs
 `scripts/003_migrate_2_9_0_to_2_14_5.sql` in place of `001` and `002`: it adds the `classes` table, repairs
 the `assignments` policies (including the missing `WITH CHECK`), and narrows the `status` constraint to the
@@ -421,9 +427,9 @@ the difference between an incident and a disaster.
 
 ## 6. Operating it
 
-**Where things live.** All persistent state is the `assignments` table plus Supabase's `auth.users`. There is
-no server-side session store, no cache to warm, no uploads directory. Appearance preferences live in each
-user's browser and are not backed up by anything.
+**Where things live.** All persistent state is the `assignments`, `classes` and `retention_settings` tables
+plus Supabase's `auth.users`. There is no server-side session store, no cache to warm, no uploads directory.
+Appearance preferences live in each user's browser and are not backed up by anything.
 
 **Useful queries.**
 
@@ -468,9 +474,43 @@ To change the default for everyone rather than per account, `ALTER TABLE retenti
 enabled SET DEFAULT false` is not enough — accounts with no row never consult the column default. Edit
 `DEFAULT_RETENTION` in `lib/data/retention.ts` instead, which is the single place the fallback is written.
 
-**Upgrading.** Pull, `bun install`, run any new files in `scripts/` in order, rebuild. Coming from 2.9.0 or
-earlier, `003_migrate_2_9_0_to_2_14_5.sql` is the only one you need — it covers `002` as well. There is no migration
-runner and no schema version tracking, so keep your own note of which SQL files you have applied.
+**Upgrading to 3.0.0.** This is a breaking release: the schema changes, and the new code will not work
+against the old one. Pull, `bun install`, apply the schema, rebuild.
+
+From 3.0.0 the schema is managed by the Supabase CLI in `supabase/migrations/`. `scripts/` is frozen at 2.x
+and nothing new goes in it.
+
+If you have the CLI:
+
+```bash
+supabase link --project-ref <your-project-ref>
+supabase migration repair --status applied \
+  20260904120000 20260904120100 20260908120000 20260910120000 20260910130000
+supabase db push
+```
+
+The `repair` is only needed on a database built by hand from `scripts/` — the CLI tracks what it has applied
+in `supabase_migrations.schema_migrations`, which such a database does not have, and without it `db push`
+would try to run the baseline as if the tables did not exist. Every migration is idempotent, so it would
+survive that; the repair is what makes `db push` report the truth afterwards.
+
+If you do not have the CLI, run **`supabase/upgrade/2_14_5_to_3_0_0.sql`** in the SQL editor instead. It is
+all five migrations in one transaction, plus the three things a hand-built 2.x database needs that the
+migrations do not cover on their own: the `classes` table if you never ran `002`, the length constraints
+under the names this document used to give them, and rows that predate the length limits entirely.
+
+**Read its header before running it.** Two parts change data:
+
+- Four free-text columns become bounded, and anything already over the limit is **truncated**. The header
+  has a query to run first that shows you exactly which rows those are. Usually none.
+- Completed assignments start being deleted automatically — a month after completion, by default. The
+  upgrade starts every existing assignment's clock at the moment you run it, not at its last edit, so
+  nothing is deleted on the first load; you have a month's notice. See **Finished work** in §1.
+
+Coming from 2.9.0 or earlier, run `scripts/003_migrate_2_9_0_to_2_14_5.sql` first, then the above.
+
+Take a backup either way. Supabase projects have point-in-time recovery on paid plans and a daily backup
+otherwise; `pg_dump` works if you have the connection string.
 
 **Removing a user.** Deleting the row from `auth.users` cascades to their assignments. The in-app Danger Zone
 does the same thing through the API.

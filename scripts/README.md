@@ -22,13 +22,25 @@ permits `'overdue'`, which the code has not recognised since 2.10, and only `003
 path — ever narrowed it.
 
 The CLI tracks what it has applied in `supabase_migrations.schema_migrations`, which a
-hand-built database does not have. Tell it the baseline is already in place before pushing
-anything after it:
+hand-built database does not have. Tell it what is already in place before pushing anything
+after it — every migration up to and including the one you are standing on, not just the
+baseline:
 
 ```bash
 supabase link --project-ref <your-project-ref>
-supabase migration repair --status applied 20260904120000
+supabase migration repair --status applied \
+  20260904120000 20260904120100 20260908120000 20260910120000 20260910130000
 supabase db push
 ```
 
-[`docs/self-hosting.md`](../docs/self-hosting.md) has the full upgrade path.
+**Without the CLI**, run [`supabase/upgrade/2_14_5_to_3_0_0.sql`](../supabase/upgrade/2_14_5_to_3_0_0.sql)
+in the SQL editor. It is those same migrations in one transaction, and it also covers the
+three things they cannot know about: a database that never ran `002`, the length constraints
+under the names `docs/self-hosting.md` used to give them, and rows written before there were
+any length limits at all. Its header says what it changes; part of it truncates data, and
+there is a query to run first that tells you whether that will touch anything of yours.
+
+That file lives outside `supabase/migrations/` on purpose — `supabase db push` must not find
+it and try to apply it as a sixth migration.
+
+[`docs/self-hosting.md`](../docs/self-hosting.md) §6 has the full upgrade path.
