@@ -5,6 +5,7 @@ import { AssignmentsList } from "@/components/assignments-list";
 import { Header } from "@/components/header";
 import { TimeZoneProvider } from "@/components/timezone-provider";
 import { fetchDashboardData } from "@/lib/data/dashboard";
+import { proSection } from "@/lib/pro";
 import { createClient } from "@/lib/supabase/server";
 import { getTimeZone } from "@/lib/timezone-server";
 
@@ -38,9 +39,13 @@ export default async function DashboardPage() {
   const dashboardData = await fetchDashboardData(data.user.id);
   const timeZone = await getTimeZone();
 
+  // The kind of account, for the profile menu. Undefined without the optional
+  // module, and the menu is then exactly what it was before.
+  const AccountType = proSection("header-account-type");
+
   return (
     <div className="min-h-screen bg-background">
-      <Header user={data.user} />
+      <Header user={data.user} accountType={AccountType ? <AccountType /> : null} />
       <main className="w-full py-6 px-6 md:px-10 lg:px-16">
         <Suspense fallback={<AssignmentsLoading />}>
           {/* Pass server-fetched data for instant hydration */}

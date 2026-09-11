@@ -4,6 +4,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { BookOpen, LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { createClient } from "@/lib/supabase/client";
@@ -18,9 +21,22 @@ import { createClient } from "@/lib/supabase/client";
 interface HeaderProps {
   user: SupabaseUser;
   isPreview?: boolean;
+  /**
+   * What kind of account this is, already rendered by the server page.
+   *
+   * Null in every build without the optional module, and then nothing is drawn
+   * — not the label, not the separator. A self-hosted instance has one kind of
+   * account, so a menu row announcing which kind you have would be answering a
+   * question nobody on it can ask.
+   *
+   * A node rather than a string because the wording belongs to whatever decides
+   * it, and because working out the answer means reading the session and a
+   * table — a server question, in a component that runs in the browser.
+   */
+  accountType?: ReactNode;
 }
 
-export function Header({ user, isPreview = false }: HeaderProps) {
+export function Header({ user, isPreview = false, accountType = null }: HeaderProps) {
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -76,6 +92,15 @@ export function Header({ user, isPreview = false }: HeaderProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {/* A label rather than an item: it says what this account is, and
+                    there is nothing to do about it here. Making it focusable
+                    would put a dead stop in the menu's keyboard order. */}
+                {accountType ? (
+                  <>
+                    <DropdownMenuLabel className="font-normal">{accountType}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
                 <DropdownMenuItem asChild className="flex items-center gap-2 cursor-pointer">
                   <Link href="/settings?tab=general">
                     <User className="h-4 w-4" />
