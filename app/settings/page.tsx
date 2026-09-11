@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Header } from "@/components/header";
+import { MoreCapabilities } from "@/components/settings/more-capabilities";
 import { RetentionCard } from "@/components/settings/retention-card";
 import { SettingsContent } from "@/components/settings-content";
 import { TimeZoneProvider } from "@/components/timezone-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readRetentionPolicy } from "@/lib/data/retention";
-import { proSection } from "@/lib/pro";
+import { capabilities, proSection } from "@/lib/pro";
 import { createClient } from "@/lib/supabase/server";
 import { getTimeZone } from "@/lib/timezone-server";
 
@@ -52,9 +53,17 @@ export default async function SettingsPage() {
   // has nothing to grey out.
   const Retention = proSection("settings-retention");
 
+  // The kind of account, for the profile menu. Same shape as the panels above:
+  // a build without the module has one kind of account and draws nothing.
+  const AccountType = proSection("header-account-type");
+
+  // What this account cannot use, and whatever the module offered to say about
+  // it. `NO_CAPABILITIES` everywhere else, which draws nothing at all.
+  const available = await capabilities(data.user.id);
+
   return (
     <div className="min-h-screen bg-background">
-      <Header user={data.user} />
+      <Header user={data.user} accountType={AccountType ? <AccountType /> : null} />
       <main className="w-full py-6 px-6 md:px-10 lg:px-16">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">Settings</h1>
@@ -62,7 +71,12 @@ export default async function SettingsPage() {
             <TimeZoneProvider initialTimeZone={await getTimeZone()}>
               <SettingsContent
                 user={data.user}
-                extraGeneralPanel={ApiTokens ? <ApiTokens /> : null}
+                extraGeneralPanel={
+                  <>
+                    {ApiTokens ? <ApiTokens /> : null}
+                    <MoreCapabilities capabilities={available} />
+                  </>
+                }
                 retentionPanel={
                   Retention ? (
                     <Retention />

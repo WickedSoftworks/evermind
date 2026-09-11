@@ -30,8 +30,8 @@ function asTab(value: string | null): SettingsTab {
 interface SettingsContentProps {
   user: SupabaseUser;
   /**
-   * An optional panel, already rendered by the server page and passed down as a
-   * node.
+   * Optional panels, already rendered by the server page and passed down as a
+   * node. There may be more than one, or none.
    *
    * It arrives this way round because deciding whether it exists is a server
    * question — it depends on which modules are compiled into this build — and
