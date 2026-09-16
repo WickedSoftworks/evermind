@@ -9,15 +9,21 @@ import { fileURLToPath } from "node:url";
 // config time: there is no runtime branch and no environment variable, and a
 // build without the submodule simply does not contain the code.
 //
+// The module has two entry points, chosen together and never separately. The
+// second carries the components that have to run in a browser, and exists
+// because the first cannot: it reaches a database client and a service-role
+// key. See `lib/pro/client.ts`.
 const proEntry = fileURLToPath(new URL("./pro/index.ts", import.meta.url));
 const proPresent = existsSync(proEntry);
 const proModulePath = proPresent ? "./pro/index.ts" : "./pro-stub/index.ts";
+const proClientPath = proPresent ? "./pro/client.ts" : "./pro-stub/client.ts";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   turbopack: {
     resolveAlias: {
       "@pro": proModulePath,
+      "@pro/client": proClientPath,
     },
   },
   // `.next/standalone` — a self-contained server with only the dependencies it

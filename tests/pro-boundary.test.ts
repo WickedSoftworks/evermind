@@ -5,6 +5,7 @@ import { capabilitiesFrom, NO_CAPABILITIES } from "@/lib/pro";
 import type { ProCapabilities, ProModule } from "@/lib/pro/contract";
 import { proRoute } from "@/lib/pro/shell";
 import proStub from "@/pro-stub";
+import proClientStub from "@/pro-stub/client";
 
 /**
  * The open-core boundary, guarded by a test rather than by discipline.
@@ -114,6 +115,28 @@ describe("the stub", () => {
     expect(Object.keys(NO_CAPABILITIES).sort()).toEqual(
       ["attachments", "calendarFeed", "canvasSync", "programmaticApi", "reminderRules", "retentionRules"].sort(),
     );
+  });
+});
+
+describe("the stub's browser half", () => {
+  test("reports itself absent and supplies no component", () => {
+    // The same rule as the capabilities above, one layer out: a build without
+    // the module has no optional components, so every consumer takes its
+    // render-nothing branch. An entry appearing here would draw *something* in
+    // a self-hosted install, and there is nothing it could honestly draw.
+    expect(proClientStub.present).toBe(false);
+    expect(Object.keys(proClientStub.sections)).toEqual([]);
+  });
+
+  test("imports nothing but the contract", () => {
+    // This file is bundled for the browser in every public build. Keeping it to
+    // a single type-only import is what makes that unremarkable — and the
+    // private half is held to the same rule, from the other side, by
+    // `pro/tests/client-boundary.test.ts`.
+    const source = readFileSync(join(ROOT, "pro-stub", "client.ts"), "utf8");
+    const specifiers = [...source.matchAll(/from\s*["']([^"']+)["']/g)].map((match) => match[1]);
+
+    expect(specifiers).toEqual(["@/lib/pro/contract"]);
   });
 });
 

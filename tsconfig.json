@@ -24,7 +24,11 @@
       // each entry in order and takes the first that resolves, so this is
       // correct whether or not `pro/` is checked out. `next.config.mjs` makes
       // the same choice for the bundler, by looking for the same file.
-      "@pro": ["./pro/index.ts", "./pro-stub/index.ts"]
+      "@pro": ["./pro/index.ts", "./pro-stub/index.ts"],
+      // The same choice again for the half of the module that runs in a
+      // browser. Separate because the server entry reaches a service-role key
+      // and must never be bundled for a client — see `lib/pro/client.ts`.
+      "@pro/client": ["./pro/client.ts", "./pro-stub/client.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
