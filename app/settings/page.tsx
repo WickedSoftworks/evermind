@@ -53,6 +53,11 @@ export default async function SettingsPage() {
   // has nothing to grey out.
   const Retention = proSection("settings-retention");
 
+  // The address a calendar subscribes to. Additive like the API card above, and
+  // it belongs beside coursework rather than beside the account, which is why it
+  // goes through a different slot.
+  const CalendarFeed = proSection("settings-calendar-feed");
+
   // The kind of account, for the profile menu. Same shape as the panels above:
   // a build without the module has one kind of account and draws nothing.
   const AccountType = proSection("header-account-type");
@@ -84,6 +89,7 @@ export default async function SettingsPage() {
                     <RetentionCard policy={await readRetentionPolicy(supabase, data.user.id)} />
                   )
                 }
+                extraAssignmentsPanel={CalendarFeed ? <CalendarFeed /> : null}
               />
             </TimeZoneProvider>
           </Suspense>

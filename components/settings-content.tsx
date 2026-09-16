@@ -48,9 +48,24 @@ interface SettingsContentProps {
    * and that is decided on the server.
    */
   retentionPanel: ReactNode;
+  /**
+   * The same arrangement as `extraGeneralPanel`, for the panels that belong
+   * beside coursework rather than beside the account.
+   *
+   * A second slot rather than one shared one, because a card about deadlines
+   * has no business appearing under a heading about the account — and the
+   * server, which is the only thing that knows which panels exist, has no way
+   * to say where one goes if there is only one door.
+   */
+  extraAssignmentsPanel?: ReactNode;
 }
 
-export function SettingsContent({ user, extraGeneralPanel, retentionPanel }: SettingsContentProps) {
+export function SettingsContent({
+  user,
+  extraGeneralPanel,
+  retentionPanel,
+  extraAssignmentsPanel,
+}: SettingsContentProps) {
   const searchParams = useSearchParams();
 
   return (
@@ -77,6 +92,7 @@ export function SettingsContent({ user, extraGeneralPanel, retentionPanel }: Set
         {retentionPanel}
         <GoogleClassroomCard />
         <CanvasImport />
+        {extraAssignmentsPanel}
       </TabsContent>
 
       <TabsContent value="appearance" className="mt-6 space-y-6">

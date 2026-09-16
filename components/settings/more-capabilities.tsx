@@ -25,12 +25,17 @@ import { capabilityPrompts } from "@/lib/pro/prompts";
 /**
  * Capabilities that draw their own card in Settings already.
  *
- * Both handle their own unavailable state in place, next to the thing they are
+ * Each handles its own unavailable state in place, next to the thing it is
  * about, which is better than a line in a list somewhere else on the page.
- * Including them here would put the same request in front of the same person
+ * Including one here would put the same request in front of the same person
  * twice on one screen.
+ *
+ * A capability joins this list on the day it grows a card, not the day it is
+ * built — an unbought account sees that card in its locked state, and that is
+ * the ask. Ones with no card of their own stay out: nothing else on the page
+ * would mention them.
  */
-const DRAWS_ITS_OWN_CARD = ["programmaticApi", "retentionRules"] as const;
+const DRAWS_ITS_OWN_CARD = ["programmaticApi", "retentionRules", "calendarFeed"] as const;
 
 export function MoreCapabilities({ capabilities }: { capabilities: ProCapabilities }) {
   const groups = capabilityPrompts(capabilities, DRAWS_ITS_OWN_CARD);
