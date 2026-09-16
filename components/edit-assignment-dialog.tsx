@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useAssignmentMutation } from "@/hooks/use-assignment-mutation";
 import { useSubjectOptions } from "@/hooks/use-classes";
 import { type AssignmentDraft, updateAssignment } from "@/lib/data/assignments";
+import { proClientSection } from "@/lib/pro/client";
 import type { Assignment } from "@/lib/types";
 
 interface EditAssignmentDialogProps {
@@ -18,6 +19,14 @@ interface EditAssignmentDialogProps {
    */
   onCloseAutoFocus?: (event: Event) => void;
 }
+
+/**
+ * Undefined in every build without the optional module, in which case nothing is
+ * drawn here — not an empty section, not a prompt. Resolved once at module scope
+ * rather than per render, because which build this is cannot change while the
+ * page is open.
+ */
+const Attachments = proClientSection("assignmentAttachments");
 
 export function EditAssignmentDialog({ assignment, open, onOpenChange, onCloseAutoFocus }: EditAssignmentDialogProps) {
   const subjectOptions = useSubjectOptions();
@@ -50,6 +59,14 @@ export function EditAssignmentDialog({ assignment, open, onOpenChange, onCloseAu
           isPending={isPending}
           onSubmit={handleSubmit}
         />
+        {/* After the form rather than inside it: attaching a file is its own
+            action that saves immediately, and putting it among fields that only
+            take effect on submit would make one of the two a lie. */}
+        {Attachments ? (
+          <div className="border-t pt-4">
+            <Attachments assignmentId={assignment.id} />
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
