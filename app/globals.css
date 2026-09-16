@@ -144,12 +144,18 @@
   padding-right: 1rem;
 }
 
-/* Compact header */
-:root.compact header {
+/* Compact header.
+ *
+ * Scoped to the site header rather than every `<header>`, for the same reason
+ * as the button rule below. The element is also the natural wrapper for a page
+ * title block — `/pro` is one — and a fixed height there crops the heading and
+ * its standfirst, then lays the next section out below the 2.75rem box instead
+ * of below the text that overflowed it, so the two overlap. */
+:root.compact [data-slot="site-header"] {
   height: 2.75rem;
 }
 
-:root.compact header > div {
+:root.compact [data-slot="site-header"] > div {
   height: 2.75rem;
 }
 
@@ -232,7 +238,7 @@
 }
 
 /* Compact avatar in header */
-:root.compact header [data-slot="avatar"] {
+:root.compact [data-slot="site-header"] [data-slot="avatar"] {
   width: 1.75rem;
   height: 1.75rem;
 }

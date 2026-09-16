@@ -52,7 +52,10 @@ export function Header({ user, isPreview = false, accountType = null }: HeaderPr
   const initials = user.email ? user.email.substring(0, 2).toUpperCase() : "U";
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header
+      data-slot="site-header"
+      className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+    >
       <div className="flex h-14 w-full items-center justify-between px-6 md:px-10 lg:px-16">
         <Link
           href="/dashboard"

@@ -4,7 +4,7 @@ export default function PreviewLoading() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header skeleton */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
+      <header data-slot="site-header" className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
         <div className="flex h-14 w-full items-center justify-between px-6 md:px-10 lg:px-16">
           <div className="flex items-center gap-2">
             <Skeleton className="h-6 w-32" />
