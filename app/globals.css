@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* The commercial module, which Tailwind would otherwise never look at.
+ *
+ * Automatic source detection skips everything `.gitignore` matches, and `/pro/`
+ * is ignored on purpose — see the note there about `git add -A` and a GPL
+ * repository. The effect was silent and worse than no styling: a class used
+ * only inside the submodule is simply never generated, while one that happens
+ * to appear somewhere public works, so a component came out half-styled. The
+ * token warning rendered its dark *text* rules and not its dark *background*
+ * one, because the background differed from a public use by an opacity step.
+ *
+ * `@source` is scanned whatever `.gitignore` says. Harmless without the
+ * submodule: the path is an empty directory in a clone that did not fetch it,
+ * and an empty directory contributes no classes. */
+@source "../pro";
+
 @custom-variant dark (&:is(.dark *));
 
 /* Updated color scheme with teal primary for Evermind */
