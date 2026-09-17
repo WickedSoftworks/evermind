@@ -254,9 +254,13 @@ Three things to know before working on it:
   trigger stamps it when a row becomes complete, clears it when the row is reopened, and leaves it alone
   when a row that is already complete is merely edited. Three code paths can complete an assignment — the
   card menu, the edit dialog, and `PATCH /api/v1/assignments/:id` — and none of them sends this column.
-- **The sweep runs on dashboard load**, in `fetchDashboardData`. There is no cron in this project and
+- **The sweep runs on dashboard load**, in `fetchDashboardData`. There is no cron in this repository and
   adding one would land on every self-hoster, so the real behaviour is "removed the next time you open
   Evermind after the period is up". The settings card says so rather than implying a precise date.
+  (The optional module installs a schedule of its own, in one of its own migrations — so it exists only
+  where that module does, and a build without it still has no cron. That is the same reasoning, not an
+  exception to it: the constraint was always "do not hand every self-hoster a background job", and a
+  private migration cannot.)
 - **Only completed rows with a known completion date are ever candidates.** Nothing pending is deleted
   however overdue it is, and a completed row whose `completed_at` is null or unparseable is kept.
   `lib/data/retention.ts` holds the rules and `tests/data-retention.test.ts` asserts each of these

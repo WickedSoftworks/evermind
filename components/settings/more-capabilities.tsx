@@ -35,7 +35,13 @@ import { capabilityPrompts } from "@/lib/pro/prompts";
  * the ask. Ones with no card of their own stay out: nothing else on the page
  * would mention them.
  */
-const DRAWS_ITS_OWN_CARD = ["programmaticApi", "retentionRules", "calendarFeed", "canvasSync"] as const;
+const DRAWS_ITS_OWN_CARD = [
+  "programmaticApi",
+  "retentionRules",
+  "calendarFeed",
+  "canvasSync",
+  "reminderRules",
+] as const;
 
 export function MoreCapabilities({ capabilities }: { capabilities: ProCapabilities }) {
   const groups = capabilityPrompts(capabilities, DRAWS_ITS_OWN_CARD);

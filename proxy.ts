@@ -18,7 +18,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Three routes are excluded deliberately, for the same reason.
+  // Four routes are excluded deliberately, for the same reason.
   //
   // `updateSession` calls `auth.getUser()` unconditionally, before any path
   // branching — a Supabase round trip on every request that reaches here. None
@@ -31,6 +31,9 @@ export const config = {
   //                       a loop rather than by a browser once a page
   //   api/pro/calendar/…  a calendar document, fetched on a timer by Google,
   //                       Apple and Outlook, whose credential is the path
+  //   api/pro/reminders/send
+  //                       called by a schedule, authenticated by a shared
+  //                       secret, and given twenty-five seconds to answer
   //
   // Note the trailing slash on the third, and that it is load-bearing. The feed
   // is `api/pro/calendar/<token>.ics`; the *settings* endpoint is
@@ -39,12 +42,18 @@ export const config = {
   // the slash would exclude both, and the symptom would be a settings card that
   // works until an access token expires and then quietly stops.
   //
-  // In a build without the optional module all three are 404s either way, so
+  // Note the shape of the reminders entry: `api/pro/reminders/send` and not
+  // `api/pro/reminders`, which is the ordinary cookie-authenticated settings
+  // route and does need its session refreshed. The same trap as the calendar
+  // pair above, and the same symptom if it is got wrong — a settings card that
+  // works until an access token expires and then quietly stops.
+  //
+  // In a build without the optional module all four are 404s either way, so
   // these exclusions are harmless there rather than conditional.
   //
-  // It costs the CSP header, which none of a callback, a JSON API or a calendar
-  // file has any use for — nothing renders their responses.
+  // It costs the CSP header, which none of a callback, a JSON API, a calendar
+  // file or a cron target has any use for — nothing renders their responses.
   matcher: [
-    "/((?!api/pro/webhook|api/pro/calendar/|api/v1|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api/pro/webhook|api/pro/calendar/|api/pro/reminders/send|api/v1|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

@@ -62,6 +62,9 @@ export default async function SettingsPage() {
   // public build already has, rather than instead of it.
   const CanvasSync = proSection("settings-canvas-sync");
 
+  // When a deadline is worth an email.
+  const Reminders = proSection("settings-reminders");
+
   // The kind of account, for the profile menu. Same shape as the panels above:
   // a build without the module has one kind of account and draws nothing.
   const AccountType = proSection("header-account-type");
@@ -95,6 +98,7 @@ export default async function SettingsPage() {
                 }
                 extraAssignmentsPanel={
                   <>
+                    {Reminders ? <Reminders /> : null}
                     {CanvasSync ? <CanvasSync /> : null}
                     {CalendarFeed ? <CalendarFeed /> : null}
                   </>
