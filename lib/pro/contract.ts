@@ -163,6 +163,15 @@ export interface ProModule {
 export interface ProClientSections {
   /** The files attached to one assignment, drawn wherever that assignment is edited. */
   readonly assignmentAttachments?: ComponentType<{ readonly assignmentId: string }>;
+  /**
+   * Whatever an edition wants to do when the dashboard opens.
+   *
+   * Renders nothing. It exists because some optional work is worth doing when a
+   * person arrives rather than on a timer — this application has no timer, by a
+   * decision recorded in `docs/architecture.md`, and the retention sweep already
+   * works this way.
+   */
+  readonly dashboardOnLoad?: ComponentType;
 }
 
 export interface ProClientModule {

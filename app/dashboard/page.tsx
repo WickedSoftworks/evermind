@@ -6,6 +6,7 @@ import { Header } from "@/components/header";
 import { TimeZoneProvider } from "@/components/timezone-provider";
 import { fetchDashboardData } from "@/lib/data/dashboard";
 import { proSection } from "@/lib/pro";
+import { proClientSection } from "@/lib/pro/client";
 import { createClient } from "@/lib/supabase/server";
 import { getTimeZone } from "@/lib/timezone-server";
 
@@ -43,6 +44,13 @@ export default async function DashboardPage() {
   // module, and the menu is then exactly what it was before.
   const AccountType = proSection("header-account-type");
 
+  // Whatever the optional module wants to do when somebody arrives. It draws
+  // nothing; this is the nearest thing the project has to a schedule, and it is
+  // the same answer the retention sweep above already gives — work happens when
+  // a person opens the page, because there is no cron and adding one would land
+  // on every self-hoster.
+  const OnLoad = proClientSection("dashboardOnLoad");
+
   return (
     <div className="min-h-screen bg-background">
       <Header user={data.user} accountType={AccountType ? <AccountType /> : null} />
@@ -51,6 +59,7 @@ export default async function DashboardPage() {
           {/* Pass server-fetched data for instant hydration */}
           <TimeZoneProvider initialTimeZone={timeZone}>
             <AssignmentsList initialData={dashboardData.assignments} />
+            {OnLoad ? <OnLoad /> : null}
           </TimeZoneProvider>
         </Suspense>
       </main>

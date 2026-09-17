@@ -58,6 +58,10 @@ export default async function SettingsPage() {
   // goes through a different slot.
   const CalendarFeed = proSection("settings-calendar-feed");
 
+  // Keeping coursework in step with a Canvas. Beside the file importer the
+  // public build already has, rather than instead of it.
+  const CanvasSync = proSection("settings-canvas-sync");
+
   // The kind of account, for the profile menu. Same shape as the panels above:
   // a build without the module has one kind of account and draws nothing.
   const AccountType = proSection("header-account-type");
@@ -89,7 +93,12 @@ export default async function SettingsPage() {
                     <RetentionCard policy={await readRetentionPolicy(supabase, data.user.id)} />
                   )
                 }
-                extraAssignmentsPanel={CalendarFeed ? <CalendarFeed /> : null}
+                extraAssignmentsPanel={
+                  <>
+                    {CanvasSync ? <CanvasSync /> : null}
+                    {CalendarFeed ? <CalendarFeed /> : null}
+                  </>
+                }
               />
             </TimeZoneProvider>
           </Suspense>
