@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClasses, useUnsavedSubjects } from "@/hooks/use-classes";
 import { createClient } from "@/lib/supabase/client";
-import { CLASSES_KEY } from "@/lib/swr-keys";
+import { ASSIGNMENTS_KEY, CLASSES_KEY } from "@/lib/swr-keys";
 import type { Class } from "@/lib/types";
 
 /**
@@ -65,6 +65,34 @@ export function ClassesManager({ userId }: { userId: string }) {
       return false;
     }
 
+    // A rename carries to the coursework filed under it.
+    //
+    // This used to be described as leaving existing work alone, which sounds
+    // deliberate and was really a limitation: `assignments.subject` is text, so
+    // renaming "Bio" to "Biology" left twelve assignments filed under "Bio"
+    // forever, and the picker then offered both spellings as if they were
+    // different classes. `class_id` is what makes the follow-up possible, and
+    // doing it is the reason that column is worth having in this repository.
+    //
+    // Assignments with no link — a subject typed freehand that never matched a
+    // saved class — are untouched, which is right: nothing claims they belong to
+    // this class.
+    if (ignoreId) {
+      const { error: renameError } = await supabase
+        .from("assignments")
+        .update({ subject: trimmed })
+        .eq("class_id", ignoreId);
+
+      if (renameError) {
+        // The class itself was renamed, so this is not a failed save. Saying
+        // nothing would be worse than saying it partly worked.
+        console.error("Could not rename the assignments filed under that class:", renameError);
+        setError("The class was renamed, but the assignments filed under it were not. Try renaming it again.");
+      }
+
+      mutate(ASSIGNMENTS_KEY);
+    }
+
     mutate(CLASSES_KEY);
     return true;
   };
@@ -95,9 +123,29 @@ export function ClassesManager({ userId }: { userId: string }) {
     setError(null);
   };
 
-  const handleDelete = async (classId: string) => {
+  const handleDelete = async (target: Class) => {
     const supabase = createClient();
-    const { error: writeError } = await supabase.from("classes").delete().eq("id", classId);
+
+    // Counted before the delete, because afterwards the foreign key has already
+    // nulled the links and there is nothing left to count.
+    const { count } = await supabase
+      .from("assignments")
+      .select("id", { count: "exact", head: true })
+      .eq("class_id", target.id);
+
+    const filed = count ?? 0;
+
+    if (
+      filed > 0 &&
+      !confirm(
+        `"${target.name}" is on ${filed} assignment${filed === 1 ? "" : "s"}. ` +
+          `They stay, still filed under "${target.name}", but will no longer follow renames. Delete the class?`,
+      )
+    ) {
+      return;
+    }
+
+    const { error: writeError } = await supabase.from("classes").delete().eq("id", target.id);
 
     if (writeError) {
       console.error("Could not delete class:", writeError);
@@ -106,6 +154,9 @@ export function ClassesManager({ userId }: { userId: string }) {
     }
 
     mutate(CLASSES_KEY);
+    // The rows themselves are unchanged — `ON DELETE SET NULL` clears `class_id`
+    // and leaves `subject` alone — but the cached copies now carry a stale link.
+    mutate(ASSIGNMENTS_KEY);
   };
 
   const saved = classes ?? [];
@@ -143,7 +194,7 @@ export function ClassesManager({ userId }: { userId: string }) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(c.id)}
+                    onClick={() => handleDelete(c)}
                     className="text-destructive hover:text-destructive"
                     aria-label={`Delete ${c.name}`}
                   >

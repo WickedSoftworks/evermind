@@ -15,6 +15,7 @@ function createMockAssignments(): Assignment[] {
     {
       id: "1",
       user_id: "preview-user",
+      class_id: null,
       title: "Math Homework Chapter 5",
       subject: "Mathematics",
       description: "Complete exercises 1-20 on quadratic equations",
@@ -28,6 +29,7 @@ function createMockAssignments(): Assignment[] {
     {
       id: "2",
       user_id: "preview-user",
+      class_id: null,
       title: "History Essay",
       subject: "History",
       description: "Write 1000 words on the Industrial Revolution",
@@ -41,6 +43,7 @@ function createMockAssignments(): Assignment[] {
     {
       id: "3",
       user_id: "preview-user",
+      class_id: null,
       title: "Physics Lab Report",
       subject: "Physics",
       description: "Document findings from the pendulum experiment",
@@ -54,6 +57,7 @@ function createMockAssignments(): Assignment[] {
     {
       id: "4",
       user_id: "preview-user",
+      class_id: null,
       title: "English Reading",
       subject: "English",
       description: "Read chapters 10-15 of To Kill a Mockingbird",
@@ -71,6 +75,7 @@ function createMockAssignments(): Assignment[] {
     {
       id: "5",
       user_id: "preview-user",
+      class_id: null,
       title: "Chemistry Quiz Prep",
       subject: "Chemistry",
       description: "Study periodic table and chemical bonding",
@@ -84,6 +89,7 @@ function createMockAssignments(): Assignment[] {
     {
       id: "6",
       user_id: "preview-user",
+      class_id: null,
       title: "Art Project Sketch",
       subject: "Art",
       description: "Complete preliminary sketches for final project",

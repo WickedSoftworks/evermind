@@ -46,6 +46,19 @@ export const assignmentDraftSchema = z.object({
     .transform((value) => (value?.trim() ? value : null)),
   due_date: timestamp,
   priority: prioritySchema,
+  /**
+   * The saved class this belongs to, where there is one.
+   *
+   * `nullish`, so a caller may send it, send null, or leave it out entirely —
+   * the last being what the Canvas file importer does, since it has no list of
+   * classes to match a subject against.
+   *
+   * Not checked for ownership here, and it does not need to be: the composite
+   * foreign key added in `20260916120000_assignment_class_link.sql` references
+   * `(id, user_id)` together, so another account's class id is a combination
+   * that does not exist and Postgres refuses it.
+   */
+  class_id: z.uuid("is not a valid id").nullish(),
 });
 
 export type AssignmentDraftInput = z.infer<typeof assignmentDraftSchema>;

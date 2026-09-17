@@ -113,7 +113,9 @@ account, or ask the operator.
 Requirements:
 
 - **Bun** (a `bun.lock` is committed) or **Node.js 20+** with npm.
-- A **Supabase** project — the free tier is enough for personal or small-group use.
+- A **Supabase** project — the free tier is enough for personal or small-group use. **PostgreSQL 15 or
+  later**, which every current Supabase project is: the schema uses `ON DELETE SET NULL (column)`, added
+  in 15, and the migration that needs it says so where it would fail.
 - **A domain with HTTPS** if the instance is public. OAuth providers will not redirect to plain HTTP outside
   localhost.
 - OAuth credentials for at least one of Google, Discord, or GitHub.

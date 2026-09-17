@@ -443,6 +443,41 @@ REVOKE INSERT, UPDATE, DELETE ON retention_settings FROM authenticated;
 REVOKE INSERT, UPDATE, DELETE ON retention_settings FROM anon;
 GRANT SELECT ON retention_settings TO authenticated;
 
+-- ---------------------------------------------------------------------------
+-- 9. `assignments.class_id` — new in 3.0.0
+-- ---------------------------------------------------------------------------
+-- Mirrors `supabase/migrations/20260916120000_assignment_class_link.sql`. Read
+-- that file's header for why the foreign key is composite; the short version is
+-- that a single-column key would let one account file an assignment under
+-- another account's class, and row-level security would not notice.
+--
+-- **Requires PostgreSQL 15 or later** for `ON DELETE SET NULL (class_id)`. If
+-- this is the statement that fails, the database is older than this release
+-- supports — see `docs/self-hosting.md`.
+
+ALTER TABLE classes DROP CONSTRAINT IF EXISTS classes_id_user_id_key;
+ALTER TABLE classes ADD CONSTRAINT classes_id_user_id_key UNIQUE (id, user_id);
+
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS class_id UUID;
+
+-- Backfills existing coursework by name, leaving a subject that matches no
+-- saved class unlinked rather than inventing one.
+UPDATE assignments a
+   SET class_id = c.id
+  FROM classes c
+ WHERE a.class_id IS NULL
+   AND c.user_id = a.user_id
+   AND lower(c.name) = lower(btrim(a.subject));
+
+ALTER TABLE assignments DROP CONSTRAINT IF EXISTS assignments_class_id_fkey;
+ALTER TABLE assignments
+  ADD CONSTRAINT assignments_class_id_fkey
+  FOREIGN KEY (class_id, user_id) REFERENCES classes(id, user_id)
+  ON DELETE SET NULL (class_id);
+
+CREATE INDEX IF NOT EXISTS idx_assignments_class_id
+  ON assignments(class_id) WHERE class_id IS NOT NULL;
+
 COMMIT;
 
 -- ---------------------------------------------------------------------------

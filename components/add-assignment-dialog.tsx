@@ -13,16 +13,22 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useAssignmentMutation } from "@/hooks/use-assignment-mutation";
-import { useSubjectOptions } from "@/hooks/use-classes";
+import { useClasses, useSubjectOptions } from "@/hooks/use-classes";
 import { type AssignmentDraft, createAssignment } from "@/lib/data/assignments";
+import { resolveClassId } from "@/lib/data/classes";
 
 export function AddAssignmentDialog() {
   const subjectOptions = useSubjectOptions();
+  const { data: classes } = useClasses();
   const { runMutation, isPending } = useAssignmentMutation();
   const [open, setOpen] = useState(false);
 
   const handleSubmit = async (draft: AssignmentDraft) => {
-    const saved = await runMutation(() => createAssignment(draft), "Could not add this assignment");
+    // Resolved here rather than inside `AssignmentForm`, which takes only the
+    // subject *names* on purpose — that same form renders on `/preview`, signed
+    // out, where there are no saved classes to look one up in.
+    const linked = { ...draft, class_id: resolveClassId(draft.subject, classes) };
+    const saved = await runMutation(() => createAssignment(linked), "Could not add this assignment");
 
     // Closing regardless is what made a rejected write look like a saved one.
     // Leave the form up with the user's input still in it so they can retry.

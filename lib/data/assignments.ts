@@ -30,6 +30,17 @@ export interface AssignmentDraft {
   description: string | null;
   due_date: string;
   priority: Priority;
+  /**
+   * The saved class this belongs to, where the subject matches one.
+   *
+   * Optional rather than required, and the reason is the Canvas importer: it
+   * produces drafts from a file and has no list of saved classes to match
+   * against, so demanding this would mean either threading the classes into the
+   * parser or writing `class_id: null` in a place that has no opinion about it.
+   * The surfaces that *do* know — the add and edit forms — set it through
+   * `resolveClassId`, and everything else leaves the column alone.
+   */
+  class_id?: string | null;
 }
 
 /**

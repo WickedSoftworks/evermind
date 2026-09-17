@@ -58,6 +58,29 @@ describe("the upgrade script and the migrations agree", () => {
     expect(declared.filter((constraint) => !upgrade.includes(constraint))).toEqual([]);
   });
 
+  test("every column the migrations add is added in the upgrade too", () => {
+    // A gap this file had until a column was actually added: it checked
+    // constraints, tables, policies, grants and one trigger, and said nothing
+    // about columns. A column present in the migrations and missing from the
+    // upgrade gives two deployments of one release different tables, and the
+    // first symptom is a query failing for half the operators.
+    const columns = matchesIn(migrations, /ADD COLUMN IF NOT EXISTS \w+ \w+/g);
+
+    expect(columns.length).toBeGreaterThan(0);
+    expect(columns.filter((column) => !upgrade.includes(column))).toEqual([]);
+  });
+
+  test("every foreign key the migrations add is added in the upgrade too", () => {
+    // Compared whole rather than by name, for the same reason the completion
+    // trigger is: a key that exists in both but references different columns,
+    // or nulls a different set on delete, is exactly what a name check waves
+    // through — and the ON DELETE clause here is load-bearing.
+    const keys = matchesIn(migrations, /ADD CONSTRAINT \w+ FOREIGN KEY \([^)]+\) REFERENCES [^;]+/g);
+
+    expect(keys.length).toBeGreaterThan(0);
+    expect(keys.filter((key) => !upgrade.includes(key))).toEqual([]);
+  });
+
   test("every table the migrations create is accounted for in the upgrade", () => {
     const tables = new Set(
       matchesIn(migrations, /CREATE TABLE IF NOT EXISTS (\w+)/g).map((match) =>

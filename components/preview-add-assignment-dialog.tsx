@@ -39,6 +39,9 @@ export function PreviewAddAssignmentDialog({ onAdd }: PreviewAddAssignmentDialog
       ...draft,
       id: `preview-${Date.now()}`,
       user_id: "preview-user",
+      // Always null here. Preview is signed out, so there are no saved classes
+      // to link to — the real dialogs resolve this through `resolveClassId`.
+      class_id: draft.class_id ?? null,
       status: "pending",
       created_at: stamp,
       updated_at: stamp,

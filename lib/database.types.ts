@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       assignments: {
         Row: {
+          class_id: string | null
           completed_at: string | null
           created_at: string
           description: string | null
@@ -24,6 +25,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          class_id?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
@@ -37,6 +39,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          class_id?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
@@ -50,6 +53,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "assignments_class_id_fkey"
+            columns: ["class_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id", "user_id"]
+          },
           {
             foreignKeyName: "assignments_user_id_fkey"
             columns: ["user_id"]
