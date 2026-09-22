@@ -166,10 +166,16 @@ export interface ProClientSections {
   /**
    * Whatever an edition wants to do when the dashboard opens.
    *
-   * Renders nothing. It exists because some optional work is worth doing when a
-   * person arrives rather than on a timer — this application has no timer, by a
-   * decision recorded in `docs/architecture.md`, and the retention sweep already
-   * works this way.
+   * It exists because some optional work is worth doing when a person arrives
+   * rather than on a timer — this application has no timer, by a decision
+   * recorded in `docs/architecture.md`, and the retention sweep already works
+   * this way.
+   *
+   * Usually it draws nothing. It is allowed to draw something, and the reason
+   * is that work done on arrival sometimes has a question attached: an edition
+   * that fetches coursework has to be able to ask which of it the person
+   * actually wants. Anything it does draw must be dismissable and must not be
+   * in the way of a dashboard somebody opened to read.
    */
   readonly dashboardOnLoad?: ComponentType;
 }
