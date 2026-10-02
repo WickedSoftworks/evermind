@@ -58,6 +58,12 @@ interface SettingsContentProps {
    * to say where one goes if there is only one door.
    */
   extraAssignmentsPanel?: ReactNode;
+  /**
+   * The same again, for the Canvas sub-tab. Its own slot for the reason the one
+   * above gives: a card that keeps coursework in step with Canvas belongs beside
+   * the Canvas file importer, and only a separate door lets the server say so.
+   */
+  extraCanvasPanel?: ReactNode;
 }
 
 export function SettingsContent({
@@ -65,6 +71,7 @@ export function SettingsContent({
   extraGeneralPanel,
   retentionPanel,
   extraAssignmentsPanel,
+  extraCanvasPanel,
 }: SettingsContentProps) {
   const searchParams = useSearchParams();
 
@@ -87,12 +94,33 @@ export function SettingsContent({
         {extraGeneralPanel}
       </TabsContent>
 
-      <TabsContent value="assignments" className="mt-6 space-y-6">
-        <ClassesManager userId={user.id} />
-        {retentionPanel}
-        <GoogleClassroomCard />
-        <CanvasImport />
-        {extraAssignmentsPanel}
+      <TabsContent value="assignments" className="mt-6">
+        {/* Grouped by where the coursework comes from. General is first and the
+            default, because it holds what applies whichever way an assignment
+            arrived — and what the reminder emails' unsubscribe link expects to
+            land on. */}
+        <Tabs defaultValue="general">
+          <TabsList aria-label="Assignment settings">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="canvas">Canvas</TabsTrigger>
+            <TabsTrigger value="google-classroom">Google Classroom</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="general" className="mt-4 space-y-6">
+            <ClassesManager userId={user.id} />
+            {retentionPanel}
+            {extraAssignmentsPanel}
+          </TabsContent>
+
+          <TabsContent value="canvas" className="mt-4 space-y-6">
+            <CanvasImport />
+            {extraCanvasPanel}
+          </TabsContent>
+
+          <TabsContent value="google-classroom" className="mt-4 space-y-6">
+            <GoogleClassroomCard />
+          </TabsContent>
+        </Tabs>
       </TabsContent>
 
       <TabsContent value="appearance" className="mt-6 space-y-6">

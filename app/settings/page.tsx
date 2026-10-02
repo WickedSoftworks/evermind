@@ -99,10 +99,10 @@ export default async function SettingsPage() {
                 extraAssignmentsPanel={
                   <>
                     {Reminders ? <Reminders /> : null}
-                    {CanvasSync ? <CanvasSync /> : null}
                     {CalendarFeed ? <CalendarFeed /> : null}
                   </>
                 }
+                extraCanvasPanel={CanvasSync ? <CanvasSync /> : null}
               />
             </TimeZoneProvider>
           </Suspense>
