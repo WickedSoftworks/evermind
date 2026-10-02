@@ -178,6 +178,9 @@ export function AssignmentForm({
             value={values.description}
             onChange={(e) => set("description", e.target.value)}
             rows={3}
+            // It grows with its text, and a pasted or imported description is
+            // long enough to push the save button off the bottom of the form.
+            className="max-h-60"
           />
         </div>
 
