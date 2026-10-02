@@ -10,6 +10,7 @@ import {
   parseCanvasJson,
   parseCanvasXml,
   parseCourseDataJs,
+  plainDescription,
 } from "@/lib/import/canvas";
 
 /**
@@ -350,6 +351,75 @@ describe("normalisation", () => {
     const result = parseCanvasJson(JSON.stringify([{ title: "Essay", due_at: "2026-11-02T23:59:00Z" }]));
 
     expect(rows(result)[0].subject).toBe("Imported");
+  });
+
+  test("stores a description as text rather than the HTML Canvas sent", () => {
+    const result = parseCanvasJson(
+      JSON.stringify([
+        { title: "Essay", subject: "S", due_at: "2026-11-02T23:59:00Z", description: "<p>Two pages.</p>" },
+      ]),
+    );
+
+    expect(rows(result)[0].description).toBe("Two pages.");
+  });
+});
+
+describe("plainDescription", () => {
+  // Verbatim from a real sync, which is what reached the edit form as markup.
+  test("turns a Canvas rich-editor description into paragraphs", () => {
+    const html = `<p>Click on the file for a digital copy of the lab handout.&nbsp; This lab will be submitted on paper in class.</p>
+<p><a class="instructure_file_link instructure_scribd_file inline_disabled" title="Ticker Tape Free Fall Lab 2024.pdf" href="https://harford.instructure.com/courses/160040/files/102832623?verifier=47c71059-05a8-491a-aaab-f22e03ef90b8&amp;wrap=1" target="_blank" data-canvas-previewable="false" data-api-endpoint="https://harford.instructure.com/api/v1/courses/160040/files/102832623" data-api-returntype="File">Acceleration Due to Gravity Lab File</a></p>`;
+
+    expect(plainDescription(html)).toBe(
+      "Click on the file for a digital copy of the lab handout. This lab will be submitted on paper in class.\n\n" +
+        "Acceleration Due to Gravity Lab File (https://harford.instructure.com/courses/160040/files/102832623?verifier=47c71059-05a8-491a-aaab-f22e03ef90b8&wrap=1)",
+    );
+  });
+
+  test("leaves text with no markup in it alone", () => {
+    expect(plainDescription("  Exercises 1-20, show work.\nDue in class.  ")).toBe(
+      "Exercises 1-20, show work.\nDue in class.",
+    );
+    expect(plainDescription("x < y and y > z")).toBe("x < y and y > z");
+  });
+
+  test.each([[null], [undefined], [""], ["<p>&nbsp;</p>"], ["<div><br></div>"]])(
+    "reads %p as no description",
+    (raw) => {
+      expect(plainDescription(raw)).toBeNull();
+    },
+  );
+
+  test("puts each list item on its own line, numbering an ordered list", () => {
+    const html = "<p>Bring:</p><ul><li>Goggles</li><li>Notebook</li></ul><ol><li>Drop</li><li>Measure</li></ol>";
+
+    expect(plainDescription(html)).toBe("Bring:\n\n• Goggles\n• Notebook\n\n1. Drop\n2. Measure");
+  });
+
+  test("breaks lines at <br> and table rows", () => {
+    expect(plainDescription("Line one<br>Line two")).toBe("Line one\nLine two");
+    expect(
+      plainDescription("<table><tr><td>Part A</td><td>10 pts</td></tr><tr><td>Part B</td><td>5 pts</td></tr></table>"),
+    ).toBe("Part A 10 pts\nPart B 5 pts");
+  });
+
+  test("does not print an address twice, or one that only works inside Canvas", () => {
+    expect(plainDescription('<p><a href="https://example.com/">https://example.com</a></p>')).toBe(
+      "https://example.com",
+    );
+    expect(plainDescription('<p>See <a href="/courses/1/pages/rubric">the rubric</a>.</p>')).toBe("See the rubric.");
+  });
+
+  test("drops scripts, styles and comments with their contents", () => {
+    expect(
+      plainDescription("<style>p { color: red }</style><!-- note --><p>Read ch. 4</p><script>alert(1)</script>"),
+    ).toBe("Read ch. 4");
+  });
+
+  test("decodes entities once, and leaves unknown ones as written", () => {
+    expect(plainDescription("<p>Q&amp;A &ndash; &lt;b&gt; &#8217; &#x2019; &amp;lt; &bogus; &constructor;</p>")).toBe(
+      "Q&A – <b> ’ ’ &lt; &bogus; &constructor;",
+    );
   });
 });
 

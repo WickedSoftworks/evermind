@@ -3,6 +3,7 @@ import { parseCanvasJson } from "./parse-json";
 import { parseCanvasXml, type XmlReader } from "./parse-xml";
 import { fail, type ParseResult } from "./types";
 
+export { plainDescription } from "./description";
 export { AssignmentCollector, canvasPriority } from "./normalise";
 export { parseCourseDataJs } from "./parse-js";
 export { parseCanvasJson } from "./parse-json";
